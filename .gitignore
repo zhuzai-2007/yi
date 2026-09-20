@@ -1,0 +1,9 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+test-results/
+artifacts/
+AGENTS.md
+CLAUDE.md
+V2-DELIVERY.md

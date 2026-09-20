@@ -1,0 +1,36 @@
+{
+  "name": "zhouyi-reader",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "npm run validate:data && npm run data:simplify && next build",
+    "start": "node scripts/serve.mjs",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "validate:data": "tsx scripts/validate-data.ts",
+    "data:import": "tsx scripts/import-data.ts",
+    "predev": "npm run validate:data && npm run data:simplify",
+    "lint": "eslint . --max-warnings=0",
+    "data:simplify": "node scripts/generate-simplified.mjs",
+    "check:static": "node scripts/check-static.mjs",
+    "test:browser": "node scripts/browser-check.mjs"
+  },
+  "dependencies": {
+    "next": "^16.1.0",
+    "opencc-js": "^1.4.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "agent-browser": "^0.21",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.5",
+    "tsx": "^4.21",
+    "typescript": "^5.9"
+  }
+}
