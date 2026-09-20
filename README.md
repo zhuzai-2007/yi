@@ -1,4 +1,4 @@
-# 周易 · 经传与结构 V4
+# 周易 · 经传与结构 V4.1
 
 **《周易》经传阅读 + 卦象结构计算 + 三钱起卦记录工具。**
 
@@ -11,21 +11,21 @@
 - `/records/`：当前浏览器卦例，查看、删除、主动导出和导入 JSON。
 - `/record/?id=…`：仅用随机 ID 定位本地原始记录，重新计算结果。
 
-沿用 V3 sticky App Shell，一级标签为：总览、动爻、本卦、之卦、结构、原典关联、AI 解读。本卦与之卦内部再分「经 / 传 / 六爻」。桌面左侧导航、右侧独立阅读滚动；手机在 Header 下固定横向标签。首页是紧凑起卦工作台，三钱页采用本地 SVG 方孔铜钱，上方投掷、下方展示已成六爻。
+沿用 V3 sticky App Shell，一级标签为：总览、动爻、本卦、之卦、结构、原典关联、AI 解读。本卦与之卦内部再分「经 / 传 / 六爻」。桌面左侧导航、右侧独立阅读滚动；手机也使用独立内容滚动，Header、摘要与紧凑横向一级标签保留在阅读区外。本卦、之卦和 AI 的二级标签在阅读区顶部 sticky。无动爻只显示一份摘要；变化箭头统一采用 SVG。首页是紧凑起卦工作台，三钱页采用本地 SVG 方孔铜钱，上方投掷、下方展示已成六爻。
 
 ## AI 辅助解读
 
-V4 使用 BYOK：在「AI 解读 → AI 设置」填写完整 HTTPS chat completions Endpoint、Model 和自己的 API Key。站点不含内置 API key，继续支持 GitHub Pages `/yi/` 纯静态部署。接口必须支持浏览器直接访问（CORS）；生产构建只允许 HTTPS，开发构建另允许 `http://localhost` / `http://127.0.0.1`。地址不得包含账号密码、查询参数或片段。
+V4.1 使用 BYOK：在全局 Header「设置」或 AI 服务状态行打开设置面板，填写 HTTPS 地址、Model 和自己的 API Key。桌面为右侧 drawer，移动端为全屏 dialog，支持 Escape、焦点返回与键盘操作。默认 Base URL 会在路径末尾拼接 `/chat/completions`（清理末尾斜杠；如需 `/v1`，应包含在 Base URL 中）；高级模式「完整接口地址」原样使用 URL。旧 V4 配置按完整地址迁移，并保留原输出格式，不增加持久保存 Key 的授权。站点不含内置 API key，继续支持 GitHub Pages `/yi/` 纯静态部署。接口必须支持浏览器直接访问（CORS）；生产构建只允许 HTTPS，开发构建另允许 `http://localhost` / `http://127.0.0.1`。地址不得包含账号密码、查询参数或片段。
 
-提供「白话导读 / 原典细读 / 结合所问」三个模式；所问为空时不能生成结合所问解读。打开记录、切换页签或模式不会调用模型。只有点击「生成解读 / 重新生成」才会将本次相关卦象、经典材料、结构及所问发送到所配置的 API。生成期间可取消；切换模式、离开页签或记录变化会取消，120 秒后也会中止等待。
+提供「白话导读 / 原典细读 / 结合所问」三个模式；所问为空时禁用结合所问模式。打开记录、切换页签或模式不会调用模型。只有点击「生成解读 / 重新生成」才会将本次相关卦象、经典材料、结构及所问发送到所配置的 API。生成期间可取消；切换模式、离开页签或记录变化会取消，120 秒后也会中止等待。
 
-AI 不负责算卦。`lib/ai/context.ts` 使用现有确定性核心的结果与本地原典生成 canonical facts 和稳定 source IDs。模型只返回解释文字和引用 ID，经 JSON parse → Zod strict schema → domain validation（动爻数量、顺序、爻名及模式）→ source validation 后，才交给固定 UI。失败仅自动修复一次，连续失败不展示残缺内容。引用展开的原文来自本地数据；AI 内容不进入「经」「传」标签或经典数据库。
+AI 不负责算卦。`lib/ai/context.ts` 使用现有确定性核心的结果与本地原典生成 canonical facts 和稳定 source IDs。模型只返回解释文字和引用 ID，经 JSON parse → Zod strict schema → domain validation（静卦/变卦类型、动爻数量、顺序、爻名及模式）→ source validation → meta-language validation 后，才交给固定 UI。失败仅自动修复一次，连续失败不展示残缺内容。引用展开的原文来自本地数据；AI 内容不进入「经」「传」标签或经典数据库。
 
-默认请求 JSON Schema structured output；接口不支持时可在设置中切换为 JSON-only，仍执行同样的本地严格校验。不会偷偷降级重发；每次生成最多初次请求加一次校验修复。`OpenAICompatibleTransport` 隔离 provider，方便以后增加 adapter。完整 system prompt 位于 `lib/ai/prompt.ts`，版本 `yi-ai-v1`。
+输出格式为 `auto / json_object / json_schema`。自动与 JSON only 均通过提示要求纯 JSON，不强制发送 `response_format`，以兼容更多接口；只有明确选择 JSON Schema 时发送对应静卦或变卦的固定 schema。三者均执行同样的本地严格校验。不会偷偷降级重发；每次生成最多初次请求加一次校验修复。`OpenAICompatibleTransport` 隔离 provider，方便以后增加 adapter。完整 system prompt 位于 `lib/ai/prompt.ts`，版本 `yi-ai-v4.1`。静卦结构为 `kind / reading / application / boundary`；变卦另有与确定动爻一致的 `change_focus`。旧版本 AI 缓存不会作为新结果显示，原卦例不受影响。正文优先连续短文，依据集中折叠、去重并按本地 sources 顺序展示。所有可见 AI 文字检查内部术语；命中时修复而非删词，第二次失败不展示结果。
 
 默认 Key 只写 `sessionStorage` 的 `yi-ai-session-config`。仅明确勾选「在此设备记住 API Key」时才写 `localStorage` 的 `yi-ai-saved-config`；取消勾选会删除持久副本，清除设置会删除两处配置。Key 直接放在发往自选接口的 Authorization header 中，不进入 URL、卦例、缓存或导出。浏览器存储不是加密保险箱，公共设备请勿记住 Key。
 
-通过校验的解读独立保存在 `yi-ai-interpretations-v1`，按部署路径、稳定记录 ID/内容指纹、模式、模型、prompt 版本匹配；读取时重新校验，可重新生成或删除。身份指纹是本地稳定序列化，不是加密。卦例 schema、JSON 导入导出范围保持不变，AI 结果和设置本轮不参与导出。
+通过校验的解读独立保存在 `yi-ai-interpretations-v1`，按部署路径、稳定记录 ID/内容指纹、模式、模型、prompt 版本匹配；读取时重新校验，可重新生成或删除，也可在全局设置中清除全部 AI 缓存。身份指纹是本地稳定序列化，不是加密。卦例 schema、JSON 导入导出范围保持不变，AI 结果和设置本轮不参与导出。
 
 AI 解读仅作阅读辅助，不是确定性预测；这些机械校验不能证明解释文字正确、引用充分或学术解释唯一。没有真实 API 调用测试，接口兼容性与解读质量需用户在自己的 provider 上验收。验收记录见 [VERIFICATION.md](VERIFICATION.md)。
 

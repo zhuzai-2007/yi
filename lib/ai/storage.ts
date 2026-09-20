@@ -20,24 +20,38 @@ export const DEFAULT_CONFIG: AiConfig = {
   model: "",
   apiKey: "",
   remember: false,
-  structured: true,
+  endpointMode: "base",
+  outputFormat: "auto",
 };
 const ConfigSchema = z.strictObject({
   endpoint: z.string().max(2000),
   model: z.string().max(200),
   apiKey: z.string().max(4000),
   remember: z.boolean(),
-  structured: z.boolean(),
+  endpointMode: z.enum(["base", "full"]),
+  outputFormat: z.enum(["auto", "json_object", "json_schema"]),
 });
+const LegacyConfigSchema = ConfigSchema.omit({
+  endpointMode: true,
+  outputFormat: true,
+}).extend({ structured: z.boolean() });
 export function readConfig(session: Store, local: Store): AiConfig {
   try {
-    const parsed = ConfigSchema.safeParse(
-      JSON.parse(
-        session.getItem(AI_KEYS.session) ||
-          local.getItem(AI_KEYS.saved) ||
-          "null",
-      ),
+    const raw = JSON.parse(
+      session.getItem(AI_KEYS.session) ||
+        local.getItem(AI_KEYS.saved) ||
+        "null",
     );
+    const legacy = LegacyConfigSchema.safeParse(raw);
+    if (legacy.success) {
+      const { structured, ...fields } = legacy.data;
+      return {
+        ...fields,
+        endpointMode: "full",
+        outputFormat: structured ? "json_schema" : "json_object",
+      };
+    }
+    const parsed = ConfigSchema.safeParse(raw);
     return parsed.success ? parsed.data : { ...DEFAULT_CONFIG };
   } catch {
     return { ...DEFAULT_CONFIG };
@@ -73,7 +87,13 @@ export function cacheKey(
     process.env.NEXT_PUBLIC_BASE_PATH || "/",
     record.id,
     // Stable serialized fingerprint also protects same-ID edits/restores.
-    [record.createdAt, record.question, record.method, record.lines, record.throws],
+    [
+      record.createdAt,
+      record.question,
+      record.method,
+      record.lines,
+      record.throws,
+    ],
     mode,
     model.trim(),
     AI_PROMPT_VERSION,

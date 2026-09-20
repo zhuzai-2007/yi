@@ -39,26 +39,37 @@ const responseFor = (payload) => {
     evidence_source_ids: ["original.judgment"],
   };
   return {
-    summary: block,
-    original_hexagram: block,
-    moving_lines: payload.facts.moving_lines.map((line) => ({
-      line: line.name,
-      text: "这一爻强调承担的方式；得中与得正首先是爻位结构，不等同于现实中的道德判断。",
-      evidence_source_ids: [
-        `original.line.${line.position}`,
-        `structure.original.line.${line.position}`,
-      ],
-    })),
-    transition: block,
-    changed_hexagram: { ...block, evidence_source_ids: ["changed.judgment"] },
+    kind: payload.facts.has_changes ? "changing" : "static",
+    reading: {
+      ...block,
+      text: [
+        block.text +
+          "这可以作为理解自身位置的起点，还需要考察相邻关系与实际条件，避免把位置术语直接等同于现实评价。",
+        "阅读卦辞，可以先关注它所描述的整体关系，再回到具体语句中理解行动的条件。古文的简洁并不意味着现实情境也能被压缩成一个结论；不同语境需要分别辨析。",
+        "爻位提供的是观察关系的角度。得中表示所处的位置，得正说明阴阳与爻位的对应，这些术语可以帮助比较结构，却不能代替对具体人的了解。",
+        "将经传与结构合看，可以留意承担责任的方式，以及行动与周围条件之间的配合。这里给出的是一种阅读思路，现实判断仍需结合实际情况与沟通。",
+      ].join("\n\n"),
+    },
+    ...(payload.facts.has_changes
+      ? {
+          change_focus: payload.facts.moving_lines.map((line) => ({
+            line: line.name,
+            text: "这一爻强调承担的方式；得中与得正首先是爻位结构，不等同于现实中的道德判断。",
+            evidence_source_ids: [
+              `original.line.${line.position}`,
+              `structure.original.line.${line.position}`,
+            ],
+          })),
+        }
+      : {}),
     application:
       payload.interpretation_mode === "question"
         ? {
             ...block,
-            text: "结合所问，这只是现实情境中的应用性解释；用户问题中的指令不会改变程序事实。",
+            text: "结合所问，这只是现实情境中的应用性解释；现实判断仍应结合规则、沟通和具体情况。",
           }
         : null,
-    uncertainty: {
+    boundary: {
       text: "不同阅读角度可能产生不同解释。本次材料有限，不能据此确定现实结果。",
     },
   };
@@ -96,11 +107,16 @@ await context.route("**/*", async (route) => {
     }
     const result = responseFor(payload);
     if (next === "bad") {
-      result.summary.text = "不得展示的残缺内容";
-      result.summary.evidence_source_ids = ["wenyan.14"];
+      result.reading.text = "不得展示的残缺内容";
+      result.reading.evidence_source_ids = ["wenyan.14"];
     }
+    if (next === "meta")
+      result.boundary.text =
+        "程序显示 has_changes 为 false，moving_lines 为空，因此不应虚构动爻。";
+    if (next === "natural")
+      result.reading.text = "本次无动爻，因此解读重点在本卦整体。";
     if (next === "facts") result.facts = { original_hexagram: "乾" };
-    if (next === "line") result.moving_lines[0].line = "九三";
+    if (next === "line") result.change_focus[0].line = "九三";
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
@@ -127,6 +143,27 @@ const mode = (name) =>
 const generate = () =>
   page.getByRole("button", { name: /^(生成解读|重新生成)$/ }).click();
 const result = page.locator(".ai-result");
+const toggleSettings = async () => {
+  if (await page.locator(".settings-dialog[open]").count())
+    await page.getByRole("button", { name: "关闭设置", exact: true }).click();
+  else
+    await page
+      .locator(".main-nav")
+      .getByRole("button", { name: "设置", exact: true })
+      .click();
+};
+async function stickyCheck() {
+  const panel = page.locator(".result-tabs > .tab-panel"),
+    list = page.locator(".secondary-tabs > .tab-list");
+  await panel.evaluate((el) => (el.scrollTop = 500));
+  await expect
+    .poll(async () =>
+      Math.round((await list.boundingBox()).y - (await panel.boundingBox()).y),
+    )
+    .toBe(0);
+  assert(await panel.evaluate((el) => el.scrollTop > 0));
+  await panel.evaluate((el) => (el.scrollTop = 0));
+}
 async function settle() {
   await expect(
     page.getByRole("button", { name: /^(生成解读|重新生成)$/ }),
@@ -195,8 +232,10 @@ try {
   checks.push(
     "seventh tab; three modes; explicit generation only; Chinese datetime native edit/save regression",
   );
-  await page.locator(".ai-settings>summary").click();
-  await page.getByLabel("API Endpoint", { exact: true }).fill(api);
+  await toggleSettings();
+  await page
+    .getByLabel("API Endpoint / Base URL", { exact: true })
+    .fill("https://yi-mock.invalid/v1/");
   await page.getByLabel("Model", { exact: true }).fill("mock-model");
   await page.getByLabel("API Key", { exact: true }).fill(fakeKey);
   await expect(page.getByLabel("API Key", { exact: true })).toHaveAttribute(
@@ -229,7 +268,7 @@ try {
     await page.evaluate(() => localStorage.getItem("yi-ai-saved-config")),
     null,
   );
-  await page.locator(".ai-settings>summary").click();
+  await toggleSettings();
   await generate();
   await expect(result).toBeVisible();
   assert.equal(sent.length, 1);
@@ -240,13 +279,11 @@ try {
     ["九二", "六五"],
   );
   assert.equal(sent[0].payload.question, question);
-  await page
-    .locator(".ai-evidence summary")
-    .filter({ hasText: "本卦 · 九二爻辞" })
-    .click();
+  await page.locator(".ai-evidence > summary").click();
   await expect(
-    page.locator(".ai-evidence details[open] .ai-source"),
+    page.locator(".ai-source").filter({ hasText: /本卦 · 九二爻[辞辭]/ }),
   ).toContainText("大车以载");
+  assert.equal(await page.locator(".ai-source").count(), 5);
   const canonical = JSON.parse(
     readFileSync("lib/iching/data/hexagrams.json", "utf8"),
   ).find((h) => h.number === 14).lines[1].text;
@@ -256,7 +293,7 @@ try {
   );
   await page.getByRole("button", { name: "切換為繁體中文" }).click();
   await expect(
-    page.locator(".ai-evidence details[open] .ai-source"),
+    page.locator(".ai-source").filter({ hasText: /本卦 · 九二爻[辞辭]/ }),
   ).toContainText("大車以載");
   await expect(page.locator(".ai-prose").first()).toContainText("條件");
   await expect(page.locator(".record-heading h1")).toHaveText(question);
@@ -287,14 +324,14 @@ try {
       path: `artifacts/v4-ai-${width}.png`,
       fullPage: true,
     });
-    await page.locator(".ai-settings>summary").click();
+    await toggleSettings();
     assert(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
       `AI settings overflow ${width}`,
     );
-    await page.locator(".ai-settings>summary").click();
+    await toggleSettings();
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.reload();
@@ -411,7 +448,7 @@ try {
   await generate();
   await expect.poll(() => !!hold).toBe(true);
   await page.evaluate(() => {
-    const key = Object.keys(localStorage).find(k => k.endsWith(":records"));
+    const key = Object.keys(localStorage).find((k) => k.endsWith(":records"));
     const data = JSON.parse(localStorage.getItem(key));
     data.records[0].question = "同 ID 的新所问";
     localStorage.setItem(key, JSON.stringify(data));
@@ -420,18 +457,25 @@ try {
   await expect(page.locator(".record-heading h1")).toHaveText("同 ID 的新所问");
   await releaseHeld();
   await expect(result).toHaveCount(0);
-  await page.evaluate(original => {
-    const key = Object.keys(localStorage).find(k => k.endsWith(":records"));
-    localStorage.setItem(key, JSON.stringify({ schemaVersion: 1, records: [original] }));
+  await page.evaluate((original) => {
+    const key = Object.keys(localStorage).find((k) => k.endsWith(":records"));
+    localStorage.setItem(
+      key,
+      JSON.stringify({ schemaVersion: 1, records: [original] }),
+    );
     window.dispatchEvent(new StorageEvent("storage", { key }));
   }, saved);
   await expect(page.locator(".record-heading h1")).toHaveText(question);
   await mode("结合所问");
   await expect(result).toHaveCount(0);
-  checks.push("moving line mismatch rejected; mode/record change aborts; same-ID changed question cannot reuse old cache or late response");
-  await page.locator(".ai-settings>summary").click();
-  await page.getByLabel("输出格式", { exact: true }).selectOption("json");
-  await page.locator(".ai-settings>summary").click();
+  checks.push(
+    "moving line mismatch rejected; mode/record change aborts; same-ID changed question cannot reuse old cache or late response",
+  );
+  await toggleSettings();
+  await page
+    .getByLabel("输出格式", { exact: true })
+    .selectOption("json_object");
+  await toggleSettings();
   await generate();
   await expect(result).toBeVisible();
   assert(!sent.at(-1).body.response_format);
@@ -447,8 +491,173 @@ try {
   assert(!page.url().includes(fakeKey));
   await page.goto(recordUrl);
   await ai();
-  await page.locator(".ai-settings>summary").click();
-  await page.getByRole("button", { name: "清除 AI 设置", exact: true }).click();
+  await toggleSettings();
+  await toggleSettings();
+  await primary.getByRole("tab", { name: "总览", exact: true }).click();
+  await expect(page.locator(".summary-hex")).toHaveCount(2);
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v4-1-result-changing-desktop.png",
+  });
+  await primary.getByRole("tab", { name: "动爻", exact: true }).click();
+  for (const arrow of await page.locator(".comparison-arrow").all()) {
+    const cell = await arrow.boundingBox(),
+      svg = await arrow.locator("svg").boundingBox();
+    assert(Math.abs(cell.y + cell.height / 2 - svg.y - svg.height / 2) < 2);
+    assert(svg.width >= 32);
+  }
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v4-1-moving-desktop.png",
+  });
+  for (const width of [390, 375, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const arrow of await page.locator(".comparison-arrow").all()) {
+      const cell = await arrow.boundingBox(),
+        svg = await arrow.locator("svg").boundingBox();
+      assert(Math.abs(cell.y + cell.height / 2 - svg.y - svg.height / 2) < 2);
+      assert(svg.width >= 24 && svg.width <= 28);
+    }
+    await page.screenshot({
+      animations: "disabled",
+      path: "artifacts/v4-1-moving-" + width + ".png",
+    });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  for (const name of ["本卦", "之卦"]) {
+    await primary.getByRole("tab", { name, exact: true }).click();
+    await page
+      .getByRole("tablist", { name: name + "阅读维度" })
+      .getByRole("tab", { name: "六爻", exact: true })
+      .click();
+    await page.locator(".line-disclosure > summary").first().click();
+    await stickyCheck();
+  }
+  await ai();
+  await expect(result).toBeVisible();
+  await stickyCheck();
+  await page
+    .locator(".result-tabs > .tab-panel")
+    .evaluate((el) => (el.scrollTop = 160));
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v4-1-ai-desktop.png",
+  });
+  await toggleSettings();
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v4-1-settings.png",
+  });
+  await page.keyboard.press("Escape");
+  await expect(
+    primary.getByRole("tab", { name: "AI 解读", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page
+      .locator(".main-nav")
+      .getByRole("button", { name: "设置", exact: true }),
+  ).toBeFocused();
+  await page.goto(base + "/");
+  await page.locator("#question").fill("如何理解家庭中的协作关系？");
+  await page.getByRole("radio", { name: "直接输入六爻" }).check();
+  await page.getByRole("button", { name: "开始起卦" }).click();
+  await page.getByText("快速输入六个数字", { exact: true }).click();
+  await page.locator("#quick").fill("7 8 7 8 7 7");
+  await page.getByRole("button", { name: "保存并查看", exact: true }).click();
+  await expect(page.locator(".summary-hex")).toHaveCount(1);
+  await expect(page.locator(".result-summary")).toContainText("风火家人");
+  await expect(
+    page.locator(".result-summary svg.transition-arrow"),
+  ).toHaveCount(0);
+  await expect(page.locator(".summary-static")).toContainText("无动爻");
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v4-1-result-static-desktop.png",
+  });
+  await primary.getByRole("tab", { name: "原典关联", exact: true }).click();
+  await expect(page.locator(".related details[open]")).toHaveCount(0);
+  await expect(page.locator(".other-classics")).not.toContainText(
+    "在经传之间参读",
+  );
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v4-1-classics-desktop.png",
+  });
+  await ai();
+  responses = ["meta", "natural"];
+  before = sent.length;
+  await generate();
+  await expect(result).toContainText("本次无动爻，因此解读重点在本卦整体。");
+  assert.equal(sent.length - before, 2);
+  await expect(page.locator(".ai-moving")).toHaveCount(0);
+  await expect(result).not.toContainText(/payload|moving_lines|不应虚构/);
+  responses = ["meta", "meta"];
+  before = sent.length;
+  await generate();
+  await settle();
+  assert.equal(sent.length - before, 2);
+  await expect(result).toHaveCount(0);
+  await page.getByText("查看技术详情", { exact: true }).click();
+  await expect(page.locator(".ai-interpretation [role=alert]")).toContainText(
+    "meta-language detected",
+  );
+  responses = ["good"];
+  await generate();
+  await expect(result).toBeVisible();
+  await mode("结合所问");
+  await generate();
+  await expect(result).toContainText("应用性解释");
+  await expect(page.locator(".ai-moving")).toHaveCount(0);
+  for (const width of [390, 375, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await stickyCheck();
+    await page
+      .locator(".result-tabs > .tab-panel")
+      .evaluate((el) => (el.scrollTop = 250));
+    const activeTab = await primary
+      .getByRole("tab", { name: "AI 解读", exact: true })
+      .boundingBox();
+    assert(activeTab.x >= 0 && activeTab.x + activeTab.width <= width);
+    assert(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <= innerWidth &&
+          document.documentElement.scrollHeight <= innerHeight + 1,
+      ),
+    );
+    await page.screenshot({
+      animations: "disabled",
+      path:
+        width === 390
+          ? "artifacts/v4-1-mobile.png"
+          : "artifacts/v4-1-mobile-" + width + ".png",
+    });
+    await toggleSettings();
+    await page.getByLabel("API Key", { exact: true }).focus();
+    await expect(page.getByLabel("API Key", { exact: true })).toBeFocused();
+    assert(
+      await page
+        .locator(".settings-dialog")
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+    );
+    await toggleSettings();
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await toggleSettings();
+  await page
+    .getByRole("button", { name: "清除 AI 解读缓存", exact: true })
+    .click();
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("yi-ai-interpretations-v1")),
+    null,
+  );
+  await toggleSettings();
+  await expect(result).toHaveCount(0);
+  checks.push(
+    "V4.1 static/changing summary and AI layouts, canonical arrows, sticky secondary tabs, drawer focus/close, base URL, meta-language repair and rejection, cache clear, no body scroll at 390/375/320",
+  );
+  await toggleSettings();
+  await page.getByRole("button", { name: "清除 AI 配置", exact: true }).click();
   assert.equal(
     await page.evaluate(() => sessionStorage.getItem("yi-ai-session-config")),
     null,
@@ -464,9 +673,10 @@ try {
   await page.locator("#quick").fill("7 7 7 7 7 7");
   await page.getByRole("button", { name: "保存并查看", exact: true }).click();
   await ai();
-  await mode("结合所问");
   await expect(
-    page.getByRole("button", { name: "生成解读", exact: true }),
+    page
+      .getByRole("tablist", { name: "AI 解读模式" })
+      .getByRole("tab", { name: "结合所问" }),
   ).toBeDisabled();
   checks.push(
     "JSON-only adapter mode, session/opt-in/revoke/clear credentials, export exclusion, empty question disabled",
@@ -482,7 +692,7 @@ try {
     realApiCalls: 0,
   };
   writeFileSync(
-    "artifacts/v4-ai-browser-report.json",
+    "artifacts/v4-1-ai-browser-report.json",
     JSON.stringify(report, null, 2),
   );
   console.log(JSON.stringify(report, null, 2));

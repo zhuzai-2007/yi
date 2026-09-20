@@ -10,22 +10,17 @@ import { ValidationError } from "../../lib/ai/validator";
 import { AI_PROMPT_VERSION } from "../../lib/ai/prompt";
 import {
   cacheKey,
-  clearConfig,
-  DEFAULT_CONFIG,
   deleteInterpretation,
   loadInterpretation,
-  readConfig,
-  saveConfig,
   saveInterpretation,
 } from "../../lib/ai/storage";
 import type {
-  AiConfig,
   CachedInterpretation,
   InterpretationMode,
 } from "../../lib/ai/types";
 import { Tabs } from "../result/Tabs";
 import { Localize } from "../Language";
-import { AiSettings } from "./AiSettings";
+import { useAiSettings } from "./AiSettingsProvider";
 import { AiResult } from "./AiResult";
 const modes = [
   { id: "plain", label: "白话导读" },
@@ -33,8 +28,8 @@ const modes = [
   { id: "question", label: "结合所问" },
 ];
 export default function AiInterpretation({ record }: { record: CastRecord }) {
-  const [mode, setMode] = useState<InterpretationMode>("plain"),
-    [config, setConfig] = useState<AiConfig>(DEFAULT_CONFIG);
+  const [mode, setMode] = useState<InterpretationMode>("plain");
+  const { config, openSettings, cacheRevision } = useAiSettings();
   const [entry, setEntry] = useState<CachedInterpretation | null>(null),
     [stage, setStage] = useState(""),
     [error, setError] = useState(""),
@@ -56,13 +51,6 @@ export default function AiInterpretation({ record }: { record: CastRecord }) {
   );
   const key = cacheKey(record, mode, config.model);
   useEffect(() => {
-    try {
-      // Browser credentials are read only after hydration; this never sends a request.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setConfig(readConfig(sessionStorage, localStorage));
-    } catch {
-      setNote("浏览器存储不可用；设置仅保留在当前页面。");
-    }
     return () => {
       request.current?.abort();
       request.current = null;
@@ -81,16 +69,7 @@ export default function AiInterpretation({ record }: { record: CastRecord }) {
     } catch {
       setEntry(null);
     }
-  }, [key, context, config.model]);
-  function updateConfig(next: AiConfig) {
-    setConfig(next);
-    setNote("");
-    try {
-      saveConfig(sessionStorage, localStorage, next);
-    } catch {
-      setNote("设置未能完整保存，请检查浏览器存储权限；当前页面仍可使用。");
-    }
-  }
+  }, [key, context, config, cacheRevision]);
   async function generate() {
     if (request.current || (mode === "question" && !record.question.trim()))
       return;
@@ -145,60 +124,67 @@ export default function AiInterpretation({ record }: { record: CastRecord }) {
   return (
     <Localize>
       <section className="ai-interpretation">
-        <p className="section-label">AI / 阅读辅助</p>
-        <h2>AI 辅助解读</h2>
-        <p className="ai-disclaimer">
-          以下内容由 AI
-          根据本次卦象、经典原文与结构信息生成，仅作为阅读和理解辅助，不构成确定性预测。
-        </p>
-        <AiSettings
-          config={config}
-          disabled={!!stage}
-          onChange={updateConfig}
-          onClear={() => {
-            try {
-              clearConfig(sessionStorage, localStorage);
-              setConfig({ ...DEFAULT_CONFIG });
-              setNote("已清除 AI 设置和保存的 API Key。");
-            } catch {
-              setNote("无法完整清除 AI 设置，请检查浏览器存储权限。");
-            }
-          }}
-        />
+        <h2>AI 解读</h2>
+        <div className="ai-service-status">
+          <span>
+            {config.model && config.endpoint && config.apiKey ? (
+              <>
+                AI 服务：<span data-verbatim>{config.model}</span>
+                {entry && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <time dateTime={entry.metadata.generatedAt}>
+                      {new Date(entry.metadata.generatedAt).toLocaleTimeString(
+                        "zh-CN",
+                        { hour: "2-digit", minute: "2-digit" },
+                      )}
+                    </time>
+                  </>
+                )}
+              </>
+            ) : (
+              "尚未配置 AI 服务"
+            )}
+          </span>
+          <button onClick={openSettings} aria-haspopup="dialog">
+            {config.model ? "设置" : "去设置"}
+          </button>
+        </div>{" "}
         <Tabs
-          items={modes}
+          items={modes.map((item) => ({
+            ...item,
+            disabled: item.id === "question" && !record.question.trim(),
+          }))}
           active={mode}
           onChange={(value) => setMode(value as InterpretationMode)}
           label="AI 解读模式"
           className="secondary-tabs ai-mode-tabs"
         >
-          <h3>
-            {mode === "plain"
-              ? "AI 白话导读"
-              : mode === "classical"
-                ? "AI 原典细读"
-                : "AI 结合所问"}
-          </h3>
-          <p className="small muted">
-            {mode === "plain"
-              ? "帮助理解古文的现代含义，不是人工校订译文。"
-              : mode === "classical"
-                ? "结合经传与爻位结构讨论，不代表唯一权威解释。"
-                : "经典依据与现实应用分开呈现，不能据此确定现实结果。"}
-          </p>
-          {mode === "question" && (
-            <p className="ai-question">
-              {record.question.trim() ? (
-                <span data-verbatim>{record.question}</span>
-              ) : (
-                "本次记录未填写所问何事，无法使用‘结合所问’模式。"
+          {!entry && (
+            <>
+              <p className="small muted">
+                {mode === "plain"
+                  ? "帮助理解古文的现代含义，不是人工校订译文。"
+                  : mode === "classical"
+                    ? "结合经传与爻位结构讨论，不代表唯一权威解释。"
+                    : "经典依据与现实应用分开呈现，不能据此确定现实结果。"}
+              </p>
+              {mode === "question" && (
+                <p className="ai-question">
+                  {record.question.trim() ? (
+                    <span data-verbatim>{record.question}</span>
+                  ) : (
+                    "本次记录未填写所问何事，无法使用‘结合所问’模式。"
+                  )}
+                </p>
               )}
-            </p>
+              <p className="small ai-consent">
+                生成时，本次卦象、相关经典材料以及所问内容（如有）将发送至你配置的
+                AI API。
+              </p>
+            </>
           )}
-          <p className="small ai-consent">
-            生成时，本次卦象、相关经典材料以及所问内容（如有）将发送至你配置的
-            AI API。
-          </p>
           {stage && (
             <p className="small muted">切换模式或离开此页签会取消当前生成。</p>
           )}
@@ -253,14 +239,6 @@ export default function AiInterpretation({ record }: { record: CastRecord }) {
           )}
           {entry && (
             <>
-              <p className="small muted ai-metadata">
-                已通过格式、动爻与来源 ID 校验 ·{" "}
-                <span data-verbatim>{entry.metadata.model}</span> ·{" "}
-                <time dateTime={entry.metadata.generatedAt}>
-                  {entry.metadata.generatedAt.replace("T", " ").slice(0, 19)}{" "}
-                  UTC
-                </time>
-              </p>
               <AiResult result={entry.result} context={context} />
             </>
           )}

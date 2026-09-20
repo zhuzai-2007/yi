@@ -238,17 +238,21 @@ try {
       );
     }
     await selectTab("总览");
-    // Expand real content so short viewport/page combinations can reach the sticky threshold.
     await page.locator(".raw-input>summary").click();
-    await page.evaluate(() =>
-      window.scrollTo({ top: 300, behavior: "instant" }),
+    const listY = (await primary.boundingBox()).y;
+    await page
+      .locator(".result-tabs > .tab-panel")
+      .evaluate((el) => (el.scrollTop = 300));
+    assert.equal((await primary.boundingBox()).y, listY);
+    assert(
+      await page.evaluate(
+        () => document.documentElement.scrollHeight <= innerHeight + 1,
+      ),
     );
-    await expect
-      .poll(async () => Math.round((await primary.boundingBox()).y))
-      .toBe(64);
     await page.locator(".raw-input>summary").click();
-    await selectTab("总览");
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page
+      .locator(".result-tabs > .tab-panel")
+      .evaluate((el) => (el.scrollTop = 0));
     await page.screenshot({
       animations: "disabled",
       path: "artifacts/v3-result-" + width + ".png",

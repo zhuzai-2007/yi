@@ -11,7 +11,9 @@ export type ValidationCode =
   | "schema error"
   | "moving line mismatch"
   | "application mismatch"
-  | "invalid source id";
+  | "invalid source id"
+  | "kind mismatch"
+  | "meta-language detected";
 export class ValidationError extends Error {
   constructor(public readonly codes: ValidationCode[]) {
     super(
@@ -25,9 +27,12 @@ export function validateInterpretationDomain(
 ): ValidationCode[] {
   const lines = context.facts.moving_lines;
   const errors: ValidationCode[] = [];
+  if (value.kind !== (context.facts.has_changes ? "changing" : "static"))
+    errors.push("kind mismatch");
   if (
-    value.moving_lines.length !== lines.length ||
-    value.moving_lines.some((line, i) => line.line !== lines[i]?.name)
+    value.kind === "changing" &&
+    (value.change_focus.length !== lines.length ||
+      value.change_focus.some((line, i) => line.line !== lines[i]?.name))
   )
     errors.push("moving line mismatch");
   if (
@@ -44,11 +49,8 @@ export function validateEvidenceIds(
 ): ValidationCode[] {
   const allowed = new Set(context.sources.map((s) => s.source_id));
   const blocks = [
-    value.summary,
-    value.original_hexagram,
-    ...value.moving_lines,
-    value.transition,
-    value.changed_hexagram,
+    value.reading,
+    ...(value.kind === "changing" ? value.change_focus : []),
     ...(value.application ? [value.application] : []),
   ];
   return blocks.some((block) =>
@@ -56,6 +58,56 @@ export function validateEvidenceIds(
   )
     ? ["invalid source id"]
     : [];
+}
+/** Visible prose only; source identifiers are intentionally technical. */
+export function validateNoMetaLanguage(
+  value: ParsedInterpretation,
+): ValidationCode[] {
+  const texts = [
+    value.reading.text,
+    value.boundary.text,
+    ...(value.application ? [value.application.text] : []),
+    ...(value.kind === "changing"
+      ? value.change_focus.flatMap((b) => [b.line, b.text])
+      : []),
+  ];
+  const patterns = [
+    /payload/i,
+    /has_changes/i,
+    /moving_lines/i,
+    /source_id/i,
+    /canonical\s+facts/i,
+    /schema/i,
+    /system\s+prompt/i,
+    /\bJSON\b/i,
+    /程序(?:提供|显示)/,
+    /按照(?:系统|要求|指令)/,
+    /不应虚构/,
+    /不得虚构/,
+    /为了?避免幻觉/,
+    /模型/,
+    /校验/,
+    /validation/i,
+    /repair/i,
+    /\bsources\b/i,
+    /生成过程/,
+  ];
+  return texts.some((text) => patterns.some((pattern) => pattern.test(text)))
+    ? ["meta-language detected"]
+    : [];
+}
+export function interpretationEvidenceIds(
+  value: ParsedInterpretation,
+): string[] {
+  return [
+    ...new Set(
+      [
+        value.reading,
+        ...(value.kind === "changing" ? value.change_focus : []),
+        ...(value.application ? [value.application] : []),
+      ].flatMap((b) => b.evidence_source_ids),
+    ),
+  ];
 }
 export function validateParsedInterpretation(
   raw: unknown,
@@ -74,6 +126,7 @@ export function validateParsedInterpretation(
   const errors = [
     ...validateInterpretationDomain(parsed.data, context),
     ...validateEvidenceIds(parsed.data, context),
+    ...validateNoMetaLanguage(parsed.data),
   ];
   if (errors.length) throw new ValidationError(errors);
   return parsed.data as ValidatedInterpretation;

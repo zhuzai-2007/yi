@@ -44,11 +44,13 @@ export type AiConfig = {
   model: string;
   apiKey: string;
   remember: boolean;
-  structured: boolean;
+  endpointMode: "base" | "full";
+  outputFormat: "auto" | "json_object" | "json_schema";
 };
 export type AiRequest = {
   messages: { role: "system" | "user" | "assistant"; content: string }[];
   signal: AbortSignal;
+  hasChanges: boolean;
 };
 export interface AiTransport {
   generate(request: AiRequest): Promise<RawModelOutput>;

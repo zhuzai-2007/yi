@@ -7,36 +7,33 @@ export function Evidence({
   ids: string[];
   context: InterpretationContext;
 }) {
+  const used = new Set(ids);
   return (
     <Localize>
-      <div className="ai-evidence">
-        <span className="muted small">依据：</span>
-        {[...new Set(ids)].map((id) => {
-          const source = context.sources.find((s) => s.source_id === id)!;
-          return (
-            <details key={id}>
-              <summary>{source.label}</summary>
-              <div className="ai-source">
-                <strong>
-                  {source.type === "jing"
-                    ? "【经】"
-                    : source.type === "zhuan"
-                      ? "【传】"
-                      : "【结构】"}{" "}
-                  {source.label}
-                </strong>
-                <p>
-                  {source.type === "structure" ? (
-                    source.text
-                  ) : (
-                    <Classic text={source.text} />
-                  )}
-                </p>
-              </div>
-            </details>
-          );
-        })}
-      </div>
+      <details className="ai-evidence">
+        <summary>查看本次解读依据</summary>
+        {context.sources
+          .filter((s) => used.has(s.source_id))
+          .map((source) => (
+            <section className="ai-source" key={source.source_id}>
+              <strong>
+                {source.type === "jing"
+                  ? "【经】"
+                  : source.type === "zhuan"
+                    ? "【传】"
+                    : "【结构】"}{" "}
+                {source.label}
+              </strong>
+              <p>
+                {source.type === "structure" ? (
+                  source.text
+                ) : (
+                  <Classic text={source.text} />
+                )}
+              </p>
+            </section>
+          ))}
+      </details>
     </Localize>
   );
 }

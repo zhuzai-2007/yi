@@ -1,11 +1,13 @@
 "use client";
+import { AiSettingsProvider, SettingsButton } from "./ai/AiSettingsProvider";
+
 import Link from "./SiteLink";
 import { usePathname } from "next/navigation";
 import { LanguageSwitch, Localize } from "./Language";
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   return (
-    <>
+    <AiSettingsProvider>
       <Localize>
         <a className="skip-link" href="#main">
           跳至主要内容
@@ -27,11 +29,15 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             >
               卦例
             </Link>
+            <SettingsButton />
             <LanguageSwitch />
           </nav>
         </header>
       </Localize>
-      <main className="page v2-page" id="main">
+      <main
+        className={`page v2-page ${/\/record\/?$/.test(pathname) ? "result-page" : ""}`}
+        id="main"
+      >
         {children}
       </main>
       <Localize>
@@ -49,6 +55,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           </span>
         </footer>
       </Localize>
-    </>
+    </AiSettingsProvider>
   );
 }

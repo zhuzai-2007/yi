@@ -1,26 +1,23 @@
 import type {
   InterpretationContext,
-  ParsedInterpretation,
   ValidatedInterpretation,
 } from "../../lib/ai/types";
+import { interpretationEvidenceIds } from "../../lib/ai/validator";
+import { getLineTitle } from "../../lib/iching/core";
 import { Localize } from "../Language";
+import TransitionArrow from "../result/TransitionArrow";
 import { Evidence } from "./Evidence";
-function Block({
-  title,
-  block,
-  context,
-}: {
-  title: string;
-  block: ParsedInterpretation["summary"];
-  context: InterpretationContext;
-}) {
+function Prose({ text }: { text: string }) {
   return (
     <Localize>
-      <section className="ai-block">
-        <h3>{title}</h3>
-        <p className="ai-prose">{block.text}</p>
-        <Evidence ids={block.evidence_source_ids} context={context} />
-      </section>
+      {text
+        .split(/\n\s*\n/)
+        .filter(Boolean)
+        .map((paragraph, i) => (
+          <p className="ai-prose" key={i}>
+            {paragraph}
+          </p>
+        ))}
     </Localize>
   );
 }
@@ -33,46 +30,44 @@ export function AiResult({
 }) {
   return (
     <Localize>
-      <div className="ai-result">
-        <Block title="解读摘要" block={result.summary} context={context} />
-        <Block
-          title={`本卦 · ${context.facts.original_hexagram.name}`}
-          block={result.original_hexagram}
-          context={context}
-        />
-        <section className="ai-moving">
-          <h3>动爻</h3>
-          {context.facts.has_changes ? (
-            result.moving_lines.map((block, i) => (
-              <Block
-                key={i}
-                title={context.facts.moving_lines[i].name}
-                block={block}
-                context={context}
-              />
-            ))
-          ) : (
-            <p>本次无动爻。</p>
-          )}
-        </section>
-        <Block title="变化" block={result.transition} context={context} />
-        <Block
-          title={`之卦 · ${context.facts.changed_hexagram.name}`}
-          block={result.changed_hexagram}
-          context={context}
-        />
-        {result.application && (
-          <Block
-            title="结合所问 · 应用性解释"
-            block={result.application}
-            context={context}
-          />
-        )}
+      <article className="ai-result">
         <section className="ai-block">
-          <h3>说明与不确定性</h3>
-          <p className="ai-prose">{result.uncertainty.text}</p>
+          <h3>核心解读</h3>
+          <Prose text={result.reading.text} />
         </section>
-      </div>
+        {result.kind === "changing" && (
+          <section className="ai-moving">
+            <h3>变化重点</h3>
+            {result.change_focus.map((block, i) => {
+              const line = context.facts.moving_lines[i];
+              return (
+                <section className="ai-change-focus" key={line.position}>
+                  <h4>
+                    {line.name}
+                    <TransitionArrow size="sm" />
+                    {getLineTitle(
+                      context.facts.changed_hexagram.lines[line.position - 1],
+                      line.position - 1,
+                    )}
+                  </h4>
+                  <Prose text={block.text} />
+                </section>
+              );
+            })}
+          </section>
+        )}
+        {result.application && (
+          <section className="ai-block">
+            <h3>结合所问</h3>
+            <Prose text={result.application.text} />
+          </section>
+        )}
+        <section className="ai-block ai-boundary">
+          <h3>解释边界</h3>
+          <Prose text={result.boundary.text} />
+        </section>
+        <Evidence ids={interpretationEvidenceIds(result)} context={context} />
+      </article>
     </Localize>
   );
 }

@@ -5,21 +5,37 @@ export function AiSettings({
   config,
   onChange,
   onClear,
+  onClearCache,
   disabled,
 }: {
   config: AiConfig;
   onChange: (config: AiConfig) => void;
   onClear: () => void;
+  onClearCache: () => void;
   disabled: boolean;
 }) {
   const id = useId(),
     [visible, setVisible] = useState(false);
   return (
     <Localize>
-      <details className="ai-settings">
-        <summary>AI 设置</summary>
+      <section className="ai-settings">
+        <h3>AI 服务</h3>
         <fieldset disabled={disabled}>
-          <label htmlFor={`${id}-endpoint`}>API Endpoint</label>
+          <label htmlFor={`${id}-endpoint-mode`}>接口地址类型</label>
+          <select
+            id={`${id}-endpoint-mode`}
+            value={config.endpointMode}
+            onChange={(e) =>
+              onChange({
+                ...config,
+                endpointMode: e.target.value as AiConfig["endpointMode"],
+              })
+            }
+          >
+            <option value="base">Base URL</option>
+            <option value="full">完整接口地址</option>
+          </select>
+          <label htmlFor={`${id}-endpoint`}>API Endpoint / Base URL</label>
           <input
             id={`${id}-endpoint`}
             type="url"
@@ -28,7 +44,11 @@ export function AiSettings({
             placeholder="https://api.example.com/v1/chat/completions"
             onChange={(e) => onChange({ ...config, endpoint: e.target.value })}
           />
-          <p className="small muted">填写完整的 chat completions 接口地址。</p>
+          <p className="small muted">
+            {config.endpointMode === "base"
+              ? "在此地址后拼接 /chat/completions；如需 /v1，请包含在地址中。"
+              : "使用完整 Chat Completions URL，不再拼接路径。"}
+          </p>
           <label htmlFor={`${id}-model`}>Model</label>
           <input
             id={`${id}-model`}
@@ -77,26 +97,35 @@ export function AiSettings({
           <label htmlFor={`${id}-format`}>输出格式</label>
           <select
             id={`${id}-format`}
-            value={config.structured ? "schema" : "json"}
+            value={config.outputFormat}
             onChange={(e) =>
-              onChange({ ...config, structured: e.target.value === "schema" })
+              onChange({
+                ...config,
+                outputFormat: e.target.value as AiConfig["outputFormat"],
+              })
             }
           >
-            <option value="schema">JSON Schema · 推荐</option>
-            <option value="json">JSON-only · 兼容模式</option>
+            <option value="auto">自动</option>
+            <option value="json_schema">JSON Schema</option>
+            <option value="json_object">JSON only</option>
           </select>
           <p className="small muted">
-            接口不支持 JSON Schema 时可切换；两种格式都执行本地严格校验。
+            自动优先采用兼容性较好的 JSON
+            only；所有格式均检查内容完整性与引用来源。
           </p>
+          <h3>数据</h3>
+          <button type="button" onClick={onClearCache}>
+            清除 AI 解读缓存
+          </button>
           <button type="button" onClick={onClear}>
-            清除 AI 设置
+            清除 AI 配置
           </button>
         </fieldset>
         <p className="small muted">
           卦例本身仍保存在你的浏览器中。只有在你主动生成 AI
           解读时，本次相关卦象材料和所问内容才会发送至你配置的 API。
         </p>
-      </details>
+      </section>
     </Localize>
   );
 }

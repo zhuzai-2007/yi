@@ -17,6 +17,7 @@ import { Passage, Related } from "./ClassicalText";
 import Structure from "./Structure";
 import { Localize } from "./Language";
 import { ThrowHistory } from "./ThrowHistory";
+import TransitionArrow from "./result/TransitionArrow";
 import { Tabs } from "./result/Tabs";
 import { HexagramTab } from "./result/HexagramTab";
 import AiInterpretation from "./ai/AiInterpretation";
@@ -57,7 +58,7 @@ export default function Reader({ record }: { record: CastRecord }) {
   const moving = record.lines.flatMap((v, i) => (isMoving(v) ? [i] : []));
   const summary = moving.length
     ? moving.map((i) => getLineTitle(bits[i], i)).join("、") + "动"
-    : "无动爻 · 本卦与之卦相同";
+    : "无动爻";
   const comparison = (full: boolean) => (
     <div className="moving-comparisons">
       {moving.length === 0 ? (
@@ -83,8 +84,8 @@ export default function Reader({ record }: { record: CastRecord }) {
                   )}
                 </div>
               ))}
-              <span className="comparison-arrow" aria-hidden="true">
-                →
+              <span className="comparison-arrow">
+                <TransitionArrow size="lg" />
               </span>
             </div>
           </article>
@@ -110,10 +111,15 @@ export default function Reader({ record }: { record: CastRecord }) {
             · {record.method === "manual" ? "直接输入" : "三钱法"}
           </p>
         </section>
-        <section className="result-summary" aria-label="卦象总览">
+        <section
+          className={`result-summary ${moving.length ? "summary-changing" : "summary-static"}`}
+          aria-label="卦象总览"
+        >
           {[
             { hex: base, b: bits, label: "本卦" },
-            { hex: next, b: changed, label: "之卦" },
+            ...(moving.length
+              ? [{ hex: next, b: changed, label: "之卦" }]
+              : []),
           ].map(({ hex, b, label }, i) => (
             <div className="summary-hex" key={label}>
               <div>
@@ -127,10 +133,17 @@ export default function Reader({ record }: { record: CastRecord }) {
               <HexagramDiagram bits={b} moving={moving} changed={i === 1} />
             </div>
           ))}
-          <div className="summary-change">
-            <span aria-hidden="true">→</span>
-            <p className="change-summary">{summary}</p>
-          </div>
+          {moving.length ? (
+            <div className="summary-change">
+              <p className="change-summary">{summary}</p>
+              <TransitionArrow />
+            </div>
+          ) : (
+            <>
+              <span className="static-label">无动爻</span>
+              <p className="static-note">本次无爻变，解读以本卦整体为主。</p>
+            </>
+          )}
         </section>
         <Tabs
           items={tabs}
@@ -153,36 +166,39 @@ export default function Reader({ record }: { record: CastRecord }) {
           {tab === "overview" && (
             <section className="overview-tab">
               <p className="section-label">总览 / 本次起卦</p>
-              <div className="judgment-pair">
+              <div
+                className={`judgment-pair ${moving.length ? "" : "single-judgment"}`}
+              >
                 <Passage
                   kind="经"
                   label={`${base.fullName} · 卦辞`}
                   text={data.judgment}
                 />
-                <Passage
-                  kind="经"
-                  label={`${next.fullName} · 卦辞`}
-                  text={nextData.judgment}
-                />
+                {moving.length > 0 && (
+                  <Passage
+                    kind="经"
+                    label={`${next.fullName} · 卦辞`}
+                    text={nextData.judgment}
+                  />
+                )}
               </div>
-              <h2>本次动爻</h2>
-              {moving.length ? (
-                moving.map((i) => (
-                  <div className="overview-moving" key={i}>
-                    <Passage
-                      kind="经"
-                      label={getLineTitle(bits[i], i)}
-                      text={data.lines[i].text}
-                    />
-                    <p className="muted">
-                      {getLineTitle(bits[i], i)} · {stateText(bits, i)} →{" "}
-                      {getLineTitle(changed[i], i)} · {stateText(changed, i)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p>本卦无动爻，未生成结构性爻变。</p>
-              )}
+              {moving.length > 0 && <h2>本次动爻</h2>}
+              {moving.length
+                ? moving.map((i) => (
+                    <div className="overview-moving" key={i}>
+                      <Passage
+                        kind="经"
+                        label={getLineTitle(bits[i], i)}
+                        text={data.lines[i].text}
+                      />
+                      <p className="muted">
+                        {getLineTitle(bits[i], i)} · {stateText(bits, i)}{" "}
+                        <TransitionArrow size="sm" />{" "}
+                        {getLineTitle(changed[i], i)} · {stateText(changed, i)}
+                      </p>
+                    </div>
+                  ))
+                : null}
               {data.special &&
                 record.lines.every((v) => v === 9 || v === 6) && (
                   <p>
@@ -217,7 +233,7 @@ export default function Reader({ record }: { record: CastRecord }) {
           {tab === "structure" && (
             <section>
               <p className="section-label">结构 / 位置事实</p>
-              <h2>本卦 → 之卦</h2>
+              <h2>结构</h2>
               {comparison(false)}
               <details className="full-structure">
                 <summary>查看完整六爻结构表</summary>
@@ -236,7 +252,13 @@ export default function Reader({ record }: { record: CastRecord }) {
                 ...(data.number === nextData.number ? [] : [nextData]),
               ].map((d) => (
                 <section key={d.number}>
-                  <h3>{d.name}</h3>
+                  <h3>
+                    {
+                      getHexagram(d.number === data.number ? bits : changed)
+                        .fullName
+                    }{" "}
+                    · 第{d.number}卦
+                  </h3>
                   <Related data={d} />
                   <a
                     className="source-link"

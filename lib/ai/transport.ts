@@ -24,14 +24,22 @@ export function validateEndpoint(
   }
 }
 /** Exactly one HTTP call per generate. Format fallback is explicit, never a hidden third request. */
+export function resolveEndpoint(
+  config: Pick<AiConfig, "endpoint" | "endpointMode">,
+): string {
+  const url = new URL(validateEndpoint(config.endpoint.trim()));
+  if (config.endpointMode === "base")
+    url.pathname = url.pathname.replace(/\/+$/, "") + "/chat/completions";
+  return validateEndpoint(url.href);
+}
 export class OpenAICompatibleTransport implements AiTransport {
   constructor(
     private readonly config: AiConfig,
     private readonly fetcher: typeof fetch = (input, init) =>
       fetch(input, init),
   ) {}
-  async generate({ messages, signal }: AiRequest): Promise<string> {
-    const endpoint = validateEndpoint(this.config.endpoint);
+  async generate({ messages, signal, hasChanges }: AiRequest): Promise<string> {
+    const endpoint = resolveEndpoint(this.config);
     if (
       !this.config.model.trim() ||
       this.config.model.length > 200 ||
@@ -57,14 +65,14 @@ export class OpenAICompatibleTransport implements AiTransport {
           model: this.config.model.trim(),
           messages,
           stream: false,
-          ...(this.config.structured
+          ...(this.config.outputFormat === "json_schema"
             ? {
                 response_format: {
                   type: "json_schema",
                   json_schema: {
                     name: "yi_interpretation",
                     strict: true,
-                    schema: interpretationJsonSchema,
+                    schema: interpretationJsonSchema(hasChanges),
                   },
                 },
               }

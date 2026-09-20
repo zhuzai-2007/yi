@@ -146,8 +146,6 @@ export function Related({ data }: { data: HexagramText }) {
   return (
     <Localize>
       <section className="related">
-        <div className="section-label">传 / 经典关联</div>
-        <h3>在经传之间参读</h3>
         {data.special && (
           <details>
             <summary>文言传 · {data.name}</summary>
@@ -159,9 +157,7 @@ export function Related({ data }: { data: HexagramText }) {
         )}
         {Object.entries(related).map(([name, entry]) => (
           <details key={name}>
-            <summary>
-              {name === "序卦" ? "序卦传 · 卦序关系" : "杂卦传 · 相关句"}
-            </summary>
+            <summary>{name === "序卦" ? "序卦传" : "杂卦传"}</summary>
             {entry.passages
               .filter((p) => p.numbers.includes(data.number))
               .map((p, i) => (

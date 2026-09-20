@@ -1,18 +1,35 @@
 import { z } from "zod";
-const evidence = {
-  text: z.string().trim().min(1).max(1600),
-  evidence_source_ids: z.array(z.string().min(1).max(100)).min(1).max(12),
+const evidenceBlock = (length: number, sources: number) =>
+  z.strictObject({
+    text: z.string().trim().min(1).max(length),
+    evidence_source_ids: z
+      .array(z.string().min(1).max(100))
+      .min(1)
+      .max(sources),
+  });
+export const EvidenceBlockSchema = evidenceBlock(4200, 16);
+const common = {
+  reading: EvidenceBlockSchema,
+  application: evidenceBlock(2400, 12).nullable(),
+  boundary: z.strictObject({ text: z.string().trim().min(1).max(600) }),
 };
-export const EvidenceBlockSchema = z.strictObject(evidence);
-export const InterpretationSchema = z.strictObject({
-  summary: EvidenceBlockSchema,
-  original_hexagram: EvidenceBlockSchema,
-  moving_lines: z
-    .array(z.strictObject({ line: z.string().min(1).max(8), ...evidence }))
-    .max(6),
-  transition: EvidenceBlockSchema,
-  changed_hexagram: EvidenceBlockSchema,
-  application: EvidenceBlockSchema.nullable(),
-  uncertainty: z.strictObject({ text: z.string().trim().min(1).max(1200) }),
+export const StaticInterpretationSchema = z.strictObject({
+  kind: z.literal("static"),
+  ...common,
 });
-export const interpretationJsonSchema = z.toJSONSchema(InterpretationSchema);
+export const ChangingInterpretationSchema = z.strictObject({
+  kind: z.literal("changing"),
+  ...common,
+  change_focus: z
+    .array(evidenceBlock(1200, 10).extend({ line: z.string().min(1).max(8) }))
+    .max(6),
+});
+export const InterpretationSchema = z.discriminatedUnion("kind", [
+  StaticInterpretationSchema,
+  ChangingInterpretationSchema,
+]);
+export function interpretationJsonSchema(hasChanges: boolean) {
+  return z.toJSONSchema(
+    hasChanges ? ChangingInterpretationSchema : StaticInterpretationSchema,
+  );
+}

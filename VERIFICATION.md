@@ -1,16 +1,40 @@
-# V4 当前验收
+# V4.1 当前验收
+
+2026-09-20，Windows / Node.js 22.23.2 / Next.js 16.3.5 / Chrome。未 commit、push 或 deploy。预览：`http://127.0.0.1:3015/yi/`。
+
+| 检查                                             | 结果                                                    |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| `npm run lint`                                   | 通过，0 错误/警告                                       |
+| `npm run typecheck`                              | 通过                                                    |
+| `npm test`                                       | 72/72，保留原测试覆盖并增加 28 项；4096 输入仍通过      |
+| `NEXT_PUBLIC_BASE_PATH=/yi npm run build`        | 四路由纯静态导出通过                                    |
+| `NEXT_PUBLIC_BASE_PATH=/yi npm run check:static` | 通过                                                    |
+| `npm run test:browser`                           | 原起卦/恢复/存储/导出导入/简繁/路由/响应式回归通过      |
+| `npm run test:browser:ai`                        | 25 次 mock 请求，真实 API 0 次，JS 错误与意外外部请求 0 |
+
+V4.1 验证：static/changing schema、固定 kind、动爻数量/顺序/名称、各模式 application；禁止元话语覆盖全部可见 AI text，修复一次成功或第二次拒绝；Base URL 与完整 URL、旧配置迁移、三种输出格式持久化；source ID 校验与依据去重；旧 schema 拒绝。
+
+浏览器 Case A：`7 9 7 7 6 7` 大有 → 同人，九二六五；双摘要、changing 阅读与两处变爻箭头。Case B：`7 8 7 8 7 7` 家人静卦；单摘要、无箭头、无变化内容块；元话语失败后自然静卦文案修复通过。两个原典二级导航与 AI 二级导航实测 sticky；手机 390/375/320 宽度无页面横向溢出和 body 双重滚动，当前一级标签可见。设置 drawer 的 Escape、焦点返回、不改变当前 Tab、Key 聚焦、记住/撤回/清除及清缓存均通过。生成、取消、模式/记录变化、迟到响应隔离与真实 JSON 下载排除 Key/AI 配置继续通过。
+
+已人工查看桌面变卦、静卦、AI 阅读、原典关联、设置、动爻箭头，以及手机截图。未发现阻断性视觉问题。原有小屏隐藏完整六爻图策略保留，摘要显示 Unicode 卦符。未做真实 API/CORS 方言、Safari/iPhone/Android 真机键盘或屏幕阅读器验收；段落连贯性由提示指导，不属于可机械证明的内容质量。测试连接暂缓。没有新增 UI/动画/Markdown 依赖或服务端。
+
+截图：`artifacts/v4-1-result-changing-desktop.png`、`v4-1-result-static-desktop.png`、`v4-1-ai-desktop.png`、`v4-1-classics-desktop.png`、`v4-1-mobile.png`、`v4-1-mobile-375.png`、`v4-1-mobile-320.png`、`v4-1-settings.png`、`v4-1-moving-desktop.png`。机器报告：`artifacts/v4-1-ai-browser-report.json`、`artifacts/v3-browser-report.json`（旧脚本文件名，对应本轮最终构建）。详细报告 `V4.1-DELIVERY.md` 已确认被 `V*-DELIVERY.md` 忽略。
+
+---
+
+# V4 历史验收
 
 2026-09-20，Windows / Node.js 22.23.2 / Next.js 16.3.5 / Chrome。仅本地实现，未 commit、push 或 deploy。
 
-| 检查 | 实际结果 |
-| --- | --- |
-| `npm run lint` | 通过，0 错误、0 警告 |
-| `npm run typecheck` | 通过 |
-| `npm test` | 44 项通过：原 20 项保留 + 24 项 AI/日期测试；4096 输入覆盖仍通过 |
-| `NEXT_PUBLIC_BASE_PATH=/yi npm run build` | 通过，四条页面路由静态导出 |
-| `NEXT_PUBLIC_BASE_PATH=/yi npm run check:static` | 通过 |
-| `npm run test:browser` | 原有三钱、手工输入、存储、导入导出、简繁、四路由、移动端回归通过；页签更新为七个 |
-| `npm run test:browser:ai` | 通过；19 次被浏览器拦截的 mock 请求，真实 API 调用 0 次 |
+| 检查                                             | 实际结果                                                                         |
+| ------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `npm run lint`                                   | 通过，0 错误、0 警告                                                             |
+| `npm run typecheck`                              | 通过                                                                             |
+| `npm test`                                       | 44 项通过：原 20 项保留 + 24 项 AI/日期测试；4096 输入覆盖仍通过                 |
+| `NEXT_PUBLIC_BASE_PATH=/yi npm run build`        | 通过，四条页面路由静态导出                                                       |
+| `NEXT_PUBLIC_BASE_PATH=/yi npm run check:static` | 通过                                                                             |
+| `npm run test:browser`                           | 原有三钱、手工输入、存储、导入导出、简繁、四路由、移动端回归通过；页签更新为七个 |
+| `npm run test:browser:ai`                        | 通过；19 次被浏览器拦截的 mock 请求，真实 API 调用 0 次                          |
 
 AI 新增覆盖：严格嵌套 Zod Schema、缺字段/额外字段/空文本/超长文本拒绝；动爻数量、顺序、爻名、无动爻和 application 模式规则；各区块伪造 source ID 拒绝；纯 JSON 与完整 fenced JSON 接受，混合散文与破损 JSON 拒绝；bad/good 修复与 bad/bad 两次后拒绝；鉴权、429、500、网络/CORS、abort、非法 envelope 与超大响应；默认 session key、显式记住/撤回/清除、缓存重读校验与删除；注入问题不改变 canonical facts。
 
@@ -32,15 +56,15 @@ V3 的实际检查结果、截图与限制见 [V3-DELIVERY.md](V3-DELIVERY.md)�
 
 ## 已实际执行
 
-| 检查 | 结果 |
-| --- | --- |
-| 修改前 `npm test` | 原 8 项全部通过 |
-| `npm run lint` | 通过，0 错误、0 警告 |
-| `npm run typecheck` | TypeScript strict 通过 |
-| `npm test` | 20 项通过，0 失败；原 8 项完整保留 |
-| `npm run build` | 根路径和 `/yi` 子路径均完成静态导出 |
+| 检查                   | 结果                                      |
+| ---------------------- | ----------------------------------------- |
+| 修改前 `npm test`      | 原 8 项全部通过                           |
+| `npm run lint`         | 通过，0 错误、0 警告                      |
+| `npm run typecheck`    | TypeScript strict 通过                    |
+| `npm test`             | 20 项通过，0 失败；原 8 项完整保留        |
+| `npm run build`        | 根路径和 `/yi` 子路径均完成静态导出       |
 | `npm run check:static` | 四个页面的 HTML、脚本、样式与导航路径通过 |
-| `npm run test:browser` | `/yi` 最终生产产物完整流程通过 |
+| `npm run test:browser` | `/yi` 最终生产产物完整流程通过            |
 
 `out/` 当前是 `/yi` 子路径产物，预览时需同样设置 `NEXT_PUBLIC_BASE_PATH=/yi`。根路径构建命令见 README。最后格式化后重新执行了 lint、typecheck、test、build、check:static，并复验浏览器流程。
 
