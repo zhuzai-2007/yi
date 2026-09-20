@@ -78,13 +78,24 @@ try {
   await expect(
     page.getByRole("radio", { name: "三钱法 · 推荐" }),
   ).toBeChecked();
-  await page.setViewportSize({width:1280,height:720});
-  const startBox=await page.getByRole("button",{name:"开始起卦"}).boundingBox();assert(startBox.y+startBox.height<=720,"home start action above fold");
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const startBox = await page
+    .getByRole("button", { name: "开始起卦" })
+    .boundingBox();
+  assert(startBox.y + startBox.height <= 720, "home start action above fold");
   await overflow("home");
-  await page.screenshot({ animations:"disabled", path: "artifacts/v3-home.png", fullPage: true });
-  await page.setViewportSize({width:390,height:844});
-  await page.screenshot({animations:"disabled",path:"artifacts/v3-home-mobile.png",fullPage:true});
-  await page.setViewportSize({width:1440,height:1000});
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v3-home.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v3-home-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await startManual();
   await page.getByRole("button", { name: "保存并查看结果" }).click();
   await expect(page.locator("#input-error")).toContainText("请完整录入");
@@ -115,7 +126,7 @@ try {
   await expect(
     primary.getByRole("tab", { name: "总览", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
-  assert.equal(await primary.getByRole("tab").count(), 6);
+  assert.equal(await primary.getByRole("tab").count(), 7);
   await selectTab("本卦");
   let secondary = page.getByRole("tablist", { name: "本卦阅读维度" });
   await secondary.getByRole("tab", { name: "六爻", exact: true }).click();
@@ -152,7 +163,11 @@ try {
   await expect(page.locator(".moving-comparison").first()).toContainText(
     "得正",
   );
-  await page.screenshot({ animations:"disabled", path: "artifacts/v3-moving.png", fullPage: true });
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v3-moving.png",
+    fullPage: true,
+  });
   await selectTab("结构");
   await expect(page.locator(".full-structure")).not.toHaveAttribute("open", "");
   await page.getByText("查看完整六爻结构表", { exact: true }).click();
@@ -164,7 +179,11 @@ try {
       page.locator(".structure").last().locator("tbody tr").nth(i),
     ).toContainText("得正");
   }
-  await page.screenshot({animations:"disabled",path:"artifacts/v3-structure.png",fullPage:true});
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v3-structure.png",
+    fullPage: true,
+  });
   await selectTab("原典关联");
   await expect(page.locator(".other-classics")).toContainText("序卦传");
   await primary
@@ -181,25 +200,35 @@ try {
   ).toBeFocused();
   await primary.getByRole("tab", { name: "动爻", exact: true }).press("End");
   await expect(
-    primary.getByRole("tab", { name: "原典关联", exact: true }),
+    primary.getByRole("tab", { name: "AI 解读", exact: true }),
   ).toBeFocused();
   await selectTab("总览");
   checks.push(
-    "V3: default overview, six primary tabs, both secondary tab sets, collapsed lines/structure, keyboard arrows/Home/End, original-to-changed structure, simplified/traditional persistence",
+    "V3: default overview, seven primary tabs, both secondary tab sets, collapsed lines/structure, keyboard arrows/Home/End, original-to-changed structure, simplified/traditional persistence",
   );
   await overflow("result");
-  await page.screenshot({ animations:"disabled",
+  await page.screenshot({
+    animations: "disabled",
     path: "artifacts/v3-result-desktop.png",
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ animations:"disabled",
+  await page.screenshot({
+    animations: "disabled",
     path: "artifacts/v3-result-mobile.png",
     fullPage: true,
   });
   for (const width of [390, 375, 320]) {
     await page.setViewportSize({ width, height: 844 });
-    for (const name of ["总览", "动爻", "本卦", "之卦", "结构", "原典关联"]) {
+    for (const name of [
+      "总览",
+      "动爻",
+      "本卦",
+      "之卦",
+      "结构",
+      "原典关联",
+      "AI 解读",
+    ]) {
       await selectTab(name);
       assert(
         await page.evaluate(
@@ -208,12 +237,20 @@ try {
         name + " mobile overflow " + width,
       );
     }
-    await page.evaluate(() => window.scrollTo(0, 300));
-    const box = await primary.boundingBox();
-    assert(box.y >= 63 && box.y <= 65, "sticky tabs below header");
+    await selectTab("总览");
+    // Expand real content so short viewport/page combinations can reach the sticky threshold.
+    await page.locator(".raw-input>summary").click();
+    await page.evaluate(() =>
+      window.scrollTo({ top: 300, behavior: "instant" }),
+    );
+    await expect
+      .poll(async () => Math.round((await primary.boundingBox()).y))
+      .toBe(64);
+    await page.locator(".raw-input>summary").click();
     await selectTab("总览");
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ animations:"disabled",
+    await page.screenshot({
+      animations: "disabled",
       path: "artifacts/v3-result-" + width + ".png",
       fullPage: true,
     });
@@ -262,7 +299,8 @@ try {
   await expect(page.getByRole("button", { name: "掷第四爻" })).toBeVisible();
   await overflow("casting");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ animations:"disabled",
+  await page.screenshot({
+    animations: "disabled",
     path: "artifacts/v3-casting-mobile.png",
     fullPage: true,
   });
@@ -274,11 +312,21 @@ try {
         exact: true,
       })
       .click();
-    if(i===3){
-      const motion=await page.locator(".coin-object").first().evaluate(el=>{const s=getComputedStyle(el);return {name:s.animationName,duration:s.animationDuration,transform:s.transform};});
-      assert.notEqual(motion.name,"toss-bronze");
-      assert.equal(motion.transform,"none");
-      assert(parseFloat(motion.duration)<=.1);
+    if (i === 3) {
+      const motion = await page
+        .locator(".coin-object")
+        .first()
+        .evaluate((el) => {
+          const s = getComputedStyle(el);
+          return {
+            name: s.animationName,
+            duration: s.animationDuration,
+            transform: s.transform,
+          };
+        });
+      assert.notEqual(motion.name, "toss-bronze");
+      assert.equal(motion.transform, "none");
+      assert(parseFloat(motion.duration) <= 0.1);
     }
   }
   await overview.waitFor();
@@ -304,7 +352,11 @@ try {
   await page.goto(base + "/records/");
   await expect(page.locator(".record-card")).toHaveCount(2);
   await overflow("records");
-  await page.screenshot({animations:"disabled",path:"artifacts/v3-records.png",fullPage:true});
+  await page.screenshot({
+    animations: "disabled",
+    path: "artifacts/v3-records.png",
+    fullPage: true,
+  });
   const downloadEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "导出 JSON" }).click();
   const download = await downloadEvent;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./v2.css";
 import "./v3.css";
+import "./v4.css";
 import { LanguageProvider } from "../components/Language";
 import Shell from "../components/Shell";
 export const metadata: Metadata = {

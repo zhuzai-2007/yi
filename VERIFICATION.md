@@ -1,4 +1,28 @@
-# V3 当前验收
+# V4 当前验收
+
+2026-09-20，Windows / Node.js 22.23.2 / Next.js 16.3.5 / Chrome。仅本地实现，未 commit、push 或 deploy。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `npm run lint` | 通过，0 错误、0 警告 |
+| `npm run typecheck` | 通过 |
+| `npm test` | 44 项通过：原 20 项保留 + 24 项 AI/日期测试；4096 输入覆盖仍通过 |
+| `NEXT_PUBLIC_BASE_PATH=/yi npm run build` | 通过，四条页面路由静态导出 |
+| `NEXT_PUBLIC_BASE_PATH=/yi npm run check:static` | 通过 |
+| `npm run test:browser` | 原有三钱、手工输入、存储、导入导出、简繁、四路由、移动端回归通过；页签更新为七个 |
+| `npm run test:browser:ai` | 通过；19 次被浏览器拦截的 mock 请求，真实 API 调用 0 次 |
+
+AI 新增覆盖：严格嵌套 Zod Schema、缺字段/额外字段/空文本/超长文本拒绝；动爻数量、顺序、爻名、无动爻和 application 模式规则；各区块伪造 source ID 拒绝；纯 JSON 与完整 fenced JSON 接受，混合散文与破损 JSON 拒绝；bad/good 修复与 bad/bad 两次后拒绝；鉴权、429、500、网络/CORS、abort、非法 envelope 与超大响应；默认 session key、显式记住/撤回/清除、缓存重读校验与删除；注入问题不改变 canonical facts。
+
+浏览器固定回归 `7 9 7 7 6 7`：大有 14、九二六五动、同人 13；三个 AI 模式均验证。证据展开核对本地九二爻辞；AI 文本和原典简繁切换均通过，所问不转换；刷新读取缓存没有 API 请求。连续两次伪造来源或事实字段不显示部分内容；错误爻名也拒绝。模式切换、主 Tab 离开、同 ID 所问变化均取消旧请求，晚到响应不污染新界面或缓存。Key 不出现在 URL、错误文案、console 或真实 JSON 下载中。
+
+移动日期回归：390px viewport 下显示 `2026年9月20日 16:15`，键盘聚焦后仍使用原生 `datetime-local`，实际保存值保留原 ISO + offset 格式。390 / 375 / 320px 的 AI 结果与展开设置均无页面横向溢出。Chrome 移动 viewport 不等于 iPhone Safari 真机或系统 picker 验收；该部分仍需人工确认。
+
+证据：`artifacts/v4-ai-browser-report.json`、`artifacts/v3-browser-report.json`（脚本沿用旧命名，报告对应本轮 V4 产物）；截图 `artifacts/v4-ai-desktop.png`、`v4-ai-evidence.png`、`v4-ai-390.png`、`v4-ai-375.png`、`v4-ai-320.png`、`v4-ai-rejected.png`、`v4-datetime-mobile.png`。已实际查看桌面、390/320 手机、引用、失败、日期截图；收紧了引用按钮留白。
+
+限制：没有真实 provider、费用或内容质量测试，没有部署测试。浏览器通常不能精确区分 CORS、DNS、TLS 或其他 fetch 网络失败；在线情况下显示“可能是 CORS”及网络检查提示。JSON Schema 不兼容时手动选择 JSON-only，不作隐藏重发。本地校验保证格式、动爻与引用 ID 合法，不能证明解释语义正确或预测真实。完整本地报告为 `V4-DELIVERY.md`（现有 `.gitignore` 忽略，不提交）。
+
+# V3 历史验收
 
 V3 的实际检查结果、截图与限制见 [V3-DELIVERY.md](V3-DELIVERY.md)，机器报告见 artifacts/v3-browser-report.json。下文保留 V2 历史验收，不代表 V3 新增实测范围。
 

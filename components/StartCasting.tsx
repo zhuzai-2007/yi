@@ -13,6 +13,7 @@ import { clearDraft, loadDraft, saveDraft, saveRecord } from "../lib/storage";
 import type { LineValue, Six } from "../lib/iching/core";
 import LineInput from "./LineInput";
 import { Localize } from "./Language";
+import { DateTimeField } from "./DateTimeField";
 export default function StartCasting() {
   const [question, setQuestion] = useState(""),
     [time, setTime] = useState(""),
@@ -147,13 +148,7 @@ export default function StartCasting() {
             <label className="field-label" htmlFor="start-time">
               起卦时间
             </label>
-            <input
-              id="start-time"
-              type="datetime-local"
-              required
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-            />
+            <DateTimeField value={time} onChange={setTime} />
             <fieldset className="method-choices">
               <legend>起卦方式</legend>
               {(
@@ -207,7 +202,7 @@ export default function StartCasting() {
               卦例仅保存在当前浏览器中。清除浏览器数据或更换设备可能导致记录丢失。
             </p>
             <p>
-              可在「卦例」主动导出 JSON 备份。没有账号、云同步或问题文本上传。
+              可在「卦例」主动导出 JSON 备份。没有账号或云同步；仅主动生成 AI 解读时，会向你配置的 API 发送相关材料与所问。
             </p>
           </div>
         </aside>

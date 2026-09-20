@@ -19,6 +19,7 @@ import { Localize } from "./Language";
 import { ThrowHistory } from "./ThrowHistory";
 import { Tabs } from "./result/Tabs";
 import { HexagramTab } from "./result/HexagramTab";
+import AiInterpretation from "./ai/AiInterpretation";
 const tabs = [
   { id: "overview", label: "总览" },
   { id: "moving", label: "动爻" },
@@ -26,6 +27,7 @@ const tabs = [
   { id: "next", label: "之卦" },
   { id: "structure", label: "结构" },
   { id: "classics", label: "原典关联" },
+  { id: "ai", label: "AI 解读" },
 ];
 function stateText(bits: Bit[], i: number) {
   const r = getStructuralRelations(bits)[i];
@@ -137,6 +139,17 @@ export default function Reader({ record }: { record: CastRecord }) {
           label="结果阅读"
           className="result-tabs"
         >
+          {tab === "ai" && (
+            <AiInterpretation
+              key={JSON.stringify([
+                record.id,
+                record.createdAt,
+                record.lines,
+                record.question,
+              ])}
+              record={record}
+            />
+          )}
           {tab === "overview" && (
             <section className="overview-tab">
               <p className="section-label">总览 / 本次起卦</p>

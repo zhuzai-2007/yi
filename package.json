@@ -14,13 +14,15 @@
     "lint": "eslint . --max-warnings=0",
     "data:simplify": "node scripts/generate-simplified.mjs",
     "check:static": "node scripts/check-static.mjs",
-    "test:browser": "node scripts/browser-check.mjs"
+    "test:browser": "node scripts/browser-check.mjs",
+    "test:browser:ai": "node scripts/browser-ai-check.mjs"
   },
   "dependencies": {
     "next": "^16.1.0",
     "opencc-js": "^1.4.2",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.58",

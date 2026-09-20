@@ -1,0 +1,177 @@
+.ai-interpretation {
+  max-width: 880px;
+  min-width: 0;
+}
+.ai-disclaimer,
+.ai-consent {
+  color: var(--muted);
+  line-height: 1.8;
+}
+.ai-settings {
+  border-block: 1px solid var(--rule);
+  padding: 12px 0;
+  margin: 18px 0;
+}
+.ai-settings fieldset {
+  border: 0;
+  padding: 12px 0;
+  min-width: 0;
+  max-width: 600px;
+}
+.ai-settings label:not(.ai-checkbox) {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 13px;
+}
+.ai-settings input:not([type="checkbox"]),
+.ai-settings select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink);
+  font: inherit;
+}
+.ai-key-field {
+  display: flex;
+  gap: 8px;
+}
+.ai-key-field input {
+  flex: 1;
+}
+.ai-key-field button {
+  flex-shrink: 0;
+}
+.ai-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+.ai-settings .ai-checkbox input {
+  width: auto;
+}
+.ai-mode-tabs > .tab-list {
+  position: static;
+}
+.ai-mode-tabs > .tab-panel {
+  padding: 16px 0 0;
+  overflow: visible;
+}
+.ai-block,
+.ai-moving {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.ai-block h3,
+.ai-moving h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.ai-moving .ai-block {
+  padding: 10px 0;
+  border: 0;
+}
+.ai-moving .ai-block h3 {
+  font-size: 15px;
+}
+.ai-prose {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.9;
+  margin: 0 0 12px;
+}
+.ai-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  font-size: 12px;
+}
+.ai-evidence details {
+  max-width: 100%;
+  border: 0;
+}
+.ai-evidence summary {
+  color: var(--muted);
+  border-bottom: 1px dotted var(--muted);
+  cursor: pointer;
+  padding: 5px 0;
+  font-size: 12px;
+  gap: 6px;
+}
+.ai-evidence summary::after {
+  font-size: 14px;
+}
+.ai-evidence details[open] {
+  flex-basis: 100%;
+}
+.ai-source {
+  background: var(--paper);
+  border-left: 2px solid var(--rule);
+  padding: 12px 16px;
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.ai-question,
+.ai-metadata {
+  overflow-wrap: anywhere;
+}
+.ai-question {
+  padding: 12px;
+  border-left: 2px solid var(--rule);
+  white-space: pre-wrap;
+}
+.datetime-field {
+  position: relative;
+}
+.datetime-display {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  background: transparent;
+}
+.datetime-display span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.datetime-native:not(.editing) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  padding: 0;
+  border: 0;
+  bottom: 0;
+  left: 0;
+}
+.datetime-native.editing {
+  display: block;
+  margin-top: 6px;
+  width: 100%;
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .ai-settings {
+    margin: 14px 0;
+  }
+  .ai-interpretation h2 {
+    font-size: 23px;
+  }
+  .ai-mode-tabs > .tab-list {
+    position: static;
+  }
+  .ai-source {
+    padding: 10px;
+  }
+}

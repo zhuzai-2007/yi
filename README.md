@@ -1,8 +1,8 @@
-# 周易 · 经传与结构 V3
+# 周易 · 经传与结构 V4
 
 **《周易》经传阅读 + 卦象结构计算 + 三钱起卦记录工具。**
 
-沿用 Next.js App Router、React、TypeScript strict 与 V1 的经典原件和确定性计算核心。所有交互均在浏览器完成，生产产物是 `out/` 静态文件，无 API、Server Action、数据库、登录、AI 或运行时后端。
+沿用 Next.js App Router、React、TypeScript strict 与 V1 的经典原件和确定性计算核心。所有交互均在浏览器完成，生产产物是 `out/` 静态文件，无 Route Handler、Server Action、数据库、登录或运行时后端。V4 增加用户主动触发、直连自选 API 的 AI 辅助解读。
 
 ## 页面与信息层级
 
@@ -11,7 +11,23 @@
 - `/records/`：当前浏览器卦例，查看、删除、主动导出和导入 JSON。
 - `/record/?id=…`：仅用随机 ID 定位本地原始记录，重新计算结果。
 
-V3 使用 sticky App Shell 和六个一级标签：总览、动爻、本卦、之卦、结构、原典关联。本卦与之卦内部再分「经 / 传 / 六爻」。桌面左侧导航、右侧独立阅读滚动；手机在 Header 下固定横向标签。首页是紧凑起卦工作台，三钱页采用本地 SVG 方孔铜钱，上方投掷、下方展示已成六爻。详见 [V3-DELIVERY.md](V3-DELIVERY.md)。
+沿用 V3 sticky App Shell，一级标签为：总览、动爻、本卦、之卦、结构、原典关联、AI 解读。本卦与之卦内部再分「经 / 传 / 六爻」。桌面左侧导航、右侧独立阅读滚动；手机在 Header 下固定横向标签。首页是紧凑起卦工作台，三钱页采用本地 SVG 方孔铜钱，上方投掷、下方展示已成六爻。
+
+## AI 辅助解读
+
+V4 使用 BYOK：在「AI 解读 → AI 设置」填写完整 HTTPS chat completions Endpoint、Model 和自己的 API Key。站点不含内置 API key，继续支持 GitHub Pages `/yi/` 纯静态部署。接口必须支持浏览器直接访问（CORS）；生产构建只允许 HTTPS，开发构建另允许 `http://localhost` / `http://127.0.0.1`。地址不得包含账号密码、查询参数或片段。
+
+提供「白话导读 / 原典细读 / 结合所问」三个模式；所问为空时不能生成结合所问解读。打开记录、切换页签或模式不会调用模型。只有点击「生成解读 / 重新生成」才会将本次相关卦象、经典材料、结构及所问发送到所配置的 API。生成期间可取消；切换模式、离开页签或记录变化会取消，120 秒后也会中止等待。
+
+AI 不负责算卦。`lib/ai/context.ts` 使用现有确定性核心的结果与本地原典生成 canonical facts 和稳定 source IDs。模型只返回解释文字和引用 ID，经 JSON parse → Zod strict schema → domain validation（动爻数量、顺序、爻名及模式）→ source validation 后，才交给固定 UI。失败仅自动修复一次，连续失败不展示残缺内容。引用展开的原文来自本地数据；AI 内容不进入「经」「传」标签或经典数据库。
+
+默认请求 JSON Schema structured output；接口不支持时可在设置中切换为 JSON-only，仍执行同样的本地严格校验。不会偷偷降级重发；每次生成最多初次请求加一次校验修复。`OpenAICompatibleTransport` 隔离 provider，方便以后增加 adapter。完整 system prompt 位于 `lib/ai/prompt.ts`，版本 `yi-ai-v1`。
+
+默认 Key 只写 `sessionStorage` 的 `yi-ai-session-config`。仅明确勾选「在此设备记住 API Key」时才写 `localStorage` 的 `yi-ai-saved-config`；取消勾选会删除持久副本，清除设置会删除两处配置。Key 直接放在发往自选接口的 Authorization header 中，不进入 URL、卦例、缓存或导出。浏览器存储不是加密保险箱，公共设备请勿记住 Key。
+
+通过校验的解读独立保存在 `yi-ai-interpretations-v1`，按部署路径、稳定记录 ID/内容指纹、模式、模型、prompt 版本匹配；读取时重新校验，可重新生成或删除。身份指纹是本地稳定序列化，不是加密。卦例 schema、JSON 导入导出范围保持不变，AI 结果和设置本轮不参与导出。
+
+AI 解读仅作阅读辅助，不是确定性预测；这些机械校验不能证明解释文字正确、引用充分或学术解释唯一。没有真实 API 调用测试，接口兼容性与解读质量需用户在自己的 provider 上验收。验收记录见 [VERIFICATION.md](VERIFICATION.md)。
 
 ## 三钱约定与结构规则
 
@@ -82,7 +98,7 @@ type LineValue = 6 | 7 | 8 | 9;
 
 导入先整体校验再确认合并：校验版本、时间、方法、约定、数量、索引、币面、币面合计与六爻一致性。重复记录去重；相同 ID 内容不同则整批拒绝，原记录不变。不支持不明历史 schema 自动迁移。文件最大 10 MB、最多 5000 条、每条问题最多 10000 字符；浏览器实际存储配额可能更小。
 
-卦例只写 localStorage，不上传、不发送第三方、不进 URL、不进 title、不被分析脚本记录。当前无 analytics。导出由用户点击触发，文件含问题内容，请自行保管。localStorage **不是加密保险箱**：同设备同浏览器可查看；清理数据、更换浏览器、域名、端口或部署路径会使旧记录不可见，迁移前请导出。不同标签页不建议同时编辑同一草稿，检测到已有变化时会拒绝覆盖。
+卦例本身只写 localStorage，不自动上传、不进 URL、不进 title、不被分析脚本记录。仅用户主动生成 AI 解读时发送相关材料与所问到自选 API；当前无 analytics。导出由用户点击触发，文件含问题内容，请自行保管。localStorage **不是加密保险箱**：同设备同浏览器可查看；清理数据、更换浏览器、域名、端口或部署路径会使旧记录不可见，迁移前请导出。不同标签页不建议同时编辑同一草稿，检测到已有变化时会拒绝覆盖。
 
 ## 本地开发与检查
 
@@ -106,7 +122,7 @@ npm start
 
 `npm run build` 先校验经典数据、生成简体阅读层，再运行 `next build`，直接输出 `out/`（无需 `next export`）。`npm start` 只是本地静态预览器，生产托管不需要 Node 服务。默认 3000 端口，可用 `$env:PORT='3010'` 更改。
 
-浏览器验收：站点运行后执行 `npm run test:browser`。默认用 Windows 已安装 Chrome；其他平台用 `BROWSER_PATH` 指向 Chrome/Chromium。`BROWSER_BASE_URL` 可覆盖待测地址。报告与截图在 `artifacts/v2-*`。
+浏览器验收：站点运行后执行 `npm run test:browser`（既有流程）和 `npm run test:browser:ai`（拦截模拟 API，不访问真实 provider）。默认用 Windows 已安装 Chrome；其他平台用 `BROWSER_PATH` 指向 Chrome/Chromium。`BROWSER_BASE_URL` 可覆盖待测地址。既有流程报告在 `artifacts/v3-browser-report.json`，V4 AI 报告在 `artifacts/v4-ai-browser-report.json`。
 
 ## GitHub Pages
 
