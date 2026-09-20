@@ -92,22 +92,17 @@ export default function StartCasting() {
     <Localize>
       <section className="intro">
         <div>
-          <p className="eyebrow">THE BOOK OF CHANGES</p>
+          <p className="eyebrow">起卦工作台</p>
           <h1>观其象，读其辞。</h1>
           <p className="intro-description">
             《周易》经传阅读 · 卦象结构计算 · 三钱起卦记录
           </p>
         </div>
-        <p className="intro-side">
-          经有其文，爻有其位。
-          <br />
-          以原典为本，以结构为序。
-        </p>
       </section>
       <div className="start-layout">
         <section className="start-card">
-          <p className="section-label">01 / 留下一则记录</p>
-          <h2>由初至上，六次成卦。</h2>
+          <p className="section-label">由初至上 / 留下一则记录</p>
+          <h2>起一卦</h2>
           {draft && (
             <div className="notice" role="status">
               <strong>发现一个未完成的起卦记录。</strong>
@@ -144,7 +139,7 @@ export default function StartCasting() {
             <textarea
               id="question"
               maxLength={10000}
-              rows={3}
+              rows={2}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="只为自己留一份记录"

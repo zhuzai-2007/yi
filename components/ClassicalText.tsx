@@ -50,6 +50,15 @@ export function LineText({
         </div>
         <Passage kind="经" label="爻辞" text={data.lines[index].text} />
         <Passage label="小象传" text={data.lines[index].littleImage} />
+        <p className="small">
+          <span className="source-tag">结构</span>比：
+          {r.neighbors.map((i) => getLineTitle(bits[i], i)).join("、")}；承：
+          {r.supports === null
+            ? "无"
+            : getLineTitle(bits[r.supports], r.supports)}
+          ；乘：{r.rides === null ? "无" : getLineTitle(bits[r.rides], r.rides)}
+          。
+        </p>
         <details className="inline-structure">
           <summary>
             <span className="source-tag">结构</span>
@@ -77,10 +86,12 @@ export function AllLines({
   data,
   bits,
   moving = [],
+  showSpecial = true,
 }: {
   data: HexagramText;
   bits: readonly Bit[];
   moving?: number[];
+  showSpecial?: boolean;
 }) {
   return (
     <Localize>
@@ -104,7 +115,7 @@ export function AllLines({
             />
           </details>
         ))}
-        {data.special && (
+        {showSpecial && data.special && (
           <div className="special-text">
             <Passage
               kind="经"

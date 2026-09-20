@@ -1,3 +1,7 @@
+# V3 当前验收
+
+V3 的实际检查结果、截图与限制见 [V3-DELIVERY.md](V3-DELIVERY.md)，机器报告见 artifacts/v3-browser-report.json。下文保留 V2 历史验收，不代表 V3 新增实测范围。
+
 # V2 验收记录
 
 验收环境：Windows、Node.js 22.23.2、Next.js 16.3.5、系统 Chrome。日期：2026-09-20。

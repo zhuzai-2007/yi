@@ -19,6 +19,12 @@ export default function Structure({
       <section className="structure">
         <div className="section-label">结构 / 依爻位规则推导</div>
         <h3>六爻各有所位</h3>
+        <details className="term-help">
+          <summary>术语 ? · 中、正、应、比、承、乘</summary>
+          <p>
+            中：二、五位于三爻卦中央。正：阳居奇位，阴居偶位。应：初四、二五、三上对应，阴阳相异为有应。比：相邻。承：下爻承上爻。乘：上爻乘下爻。以上只说明位置，不作吉凶判断。
+          </p>
+        </details>
         <p className="muted">
           二、五得中；奇位为阳位，偶位为阴位。初与四、二与五、三与上对应，阴阳相异为有应。
         </p>

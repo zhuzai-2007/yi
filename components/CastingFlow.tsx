@@ -15,6 +15,7 @@ import { getYinYang, isMoving, positions } from "../lib/iching/core";
 import { Localize } from "./Language";
 import { LineMark } from "./HexagramDiagram";
 import { ThrowHistory } from "./ThrowHistory";
+import { Coin } from "./casting/Coin";
 export default function CastingFlow() {
   const [draft, setDraft] = useState<Draft | null>(null),
     [ready, setReady] = useState(false),
@@ -41,12 +42,21 @@ export default function CastingFlow() {
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
   }, [unsaved]);
-  function persist(next: Draft) {
+  function persist(next: Draft, animate = false) {
     saveDraft(localStorage, next);
     if (next.currentStep === 6) {
       saveRecord(localStorage, finishDraft(next));
       clearDraft(localStorage);
-      navigate(`/record/?id=${encodeURIComponent(next.id)}`, true);
+      const leave = () =>
+        navigate(`/record/?id=${encodeURIComponent(next.id)}`, true);
+      if (animate)
+        window.setTimeout(
+          leave,
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? 100
+            : 950,
+        );
+      else leave();
     }
     setUnsaved(false);
   }
@@ -62,7 +72,7 @@ export default function CastingFlow() {
       const next = appendThrow(draft, tossCoins());
       setDraft(next);
       try {
-        persist(next);
+        persist(next, true);
       } catch {
         setUnsaved(true);
         setError("本次结果尚未完整保存。请重试保存；不会重新投掷。");
@@ -74,10 +84,15 @@ export default function CastingFlow() {
           : "安全随机源不可用，请使用 HTTPS 或本地 localhost。",
       );
     } finally {
-      window.setTimeout(() => {
-        lock.current = false;
-        setBusy(false);
-      }, 240);
+      window.setTimeout(
+        () => {
+          lock.current = false;
+          setBusy(false);
+        },
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? 100
+          : 950,
+      );
     }
   }
   function retry() {
@@ -94,7 +109,7 @@ export default function CastingFlow() {
     <Localize>
       <section className="flow-heading">
         <p className="section-label">三钱法 / 由下而上</p>
-        <h1>一爻一记，六爻成象。</h1>
+        <h1>三钱起卦</h1>
         <p data-verbatim>{draft?.question}</p>
       </section>
       {!ready ? (
@@ -146,12 +161,7 @@ export default function CastingFlow() {
               key={draft.currentStep}
             >
               {[0, 1, 2].map((i) => (
-                <div className="coin" key={i}>
-                  <span>
-                    {last ? (last.coins[i] === "heads" ? "正" : "背") : "·"}
-                  </span>
-                  <small>{last ? COIN_VALUES[last.coins[i]] : "待掷"}</small>
-                </div>
+                <Coin key={i} index={i} side={last?.coins[i]} />
               ))}
             </div>
             <div className="last-throw" aria-live="polite">
@@ -170,6 +180,26 @@ export default function CastingFlow() {
                 <p>准备好后，掷出第一爻。</p>
               )}
             </div>
+            <div className="throw-action">
+              {draft.currentStep < 6 && (
+                <button
+                  className="primary"
+                  disabled={busy || unsaved}
+                  onClick={toss}
+                >
+                  掷第{["一", "二", "三", "四", "五", "六"][draft.currentStep]}
+                  爻
+                </button>
+              )}
+              {!busy && (unsaved || draft.currentStep === 6) && (
+                <button className="button-link" onClick={retry}>
+                  重试保存并继续
+                </button>
+              )}
+              <p className="muted small">
+                每一投自动保存；可中途离开，稍后继续。
+              </p>
+            </div>
             <details className="coin-rules">
               <summary>规则说明</summary>
               <p>
@@ -179,6 +209,7 @@ export default function CastingFlow() {
               <p>
                 每枚钱使用浏览器安全随机源，正背等概率。第一次写入初爻，第六次写入上爻。
               </p>
+              <p>钱面为本工具的自拟纹样，不对应历史朝代或真实钱币。</p>
             </details>
           </section>
           <section className="building-hex" aria-label="当前已生成卦象">
@@ -205,25 +236,6 @@ export default function CastingFlow() {
             </div>
             <p className="muted small">↑ 第一次从初爻开始，依次向上。</p>
           </section>
-          <div className="throw-action">
-            {draft.currentStep < 6 && (
-              <button
-                className="primary"
-                disabled={busy || unsaved}
-                onClick={toss}
-              >
-                掷第{["一", "二", "三", "四", "五", "六"][draft.currentStep]}爻
-              </button>
-            )}
-            {(unsaved || draft.currentStep === 6) && (
-              <button className="button-link" onClick={retry}>
-                重试保存并继续
-              </button>
-            )}
-            <p className="muted small">
-              每一投自动保存；可中途离开，稍后继续。
-            </p>
-          </div>
           <details className="flow-history">
             <summary>已投掷的原始结果（{draft.currentStep}）</summary>
             <ThrowHistory throws={draft.throws} />
