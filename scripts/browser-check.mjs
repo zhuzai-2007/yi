@@ -1,4 +1,5 @@
 import { chromium, expect } from "@playwright/test";
+import { browserExecutable } from "./browser-executable.mjs";
 import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
 mkdirSync("artifacts", { recursive: true });
@@ -8,9 +9,7 @@ const base = (process.env.BROWSER_BASE_URL || "http://127.0.0.1:3000").replace(
 );
 const browser = await chromium.launch({
   headless: true,
-  executablePath:
-    process.env.BROWSER_PATH ||
-    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  executablePath: browserExecutable(),
 });
 const context = await browser.newContext({
   viewport: { width: 1440, height: 1000 },
@@ -22,7 +21,7 @@ const errors = [],
   checks = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => {
-  if (m.type() === "error") errors.push(m.text());
+  if (m.type() === "error") errors.push(`${m.text()} ${m.location().url}`);
 });
 page.on("request", (r) => {
   if (new URL(r.url()).origin !== new URL(base).origin) external.push(r.url());

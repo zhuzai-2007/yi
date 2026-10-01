@@ -1,4 +1,4 @@
-# 周易 · 经传与结构 V4.1
+# 周易 · 经传与结构 V4.2 / PWA
 
 **《周易》经传阅读 + 卦象结构计算 + 三钱起卦记录工具。**
 
@@ -28,6 +28,24 @@ AI 不负责算卦。`lib/ai/context.ts` 使用现有确定性核心的结果与
 通过校验的解读独立保存在 `yi-ai-interpretations-v1`，按部署路径、稳定记录 ID/内容指纹、模式、模型、prompt 版本匹配；读取时重新校验，可重新生成或删除，也可在全局设置中清除全部 AI 缓存。身份指纹是本地稳定序列化，不是加密。卦例 schema、JSON 导入导出范围保持不变，AI 结果和设置本轮不参与导出。
 
 AI 解读仅作阅读辅助，不是确定性预测；这些机械校验不能证明解释文字正确、引用充分或学术解释唯一。没有真实 API 调用测试，接口兼容性与解读质量需用户在自己的 provider 上验收。验收记录见 [VERIFICATION.md](VERIFICATION.md)。
+
+### PWA / 离线使用
+
+首次需要联网打开站点并等待 Service Worker 完成整个静态产物的预缓存。安装成功后，首页、直接输入、三钱起卦、草稿恢复、本地卦例、总览／动爻／本卦／之卦／结构／原典关联、经传全文、简繁切换以及 JSON 导入导出都可离线使用；无需先逐页访问。离线打开 `/record/?id=…` 时，只有导航请求忽略查询参数，返回缓存的记录页 HTML，再读取当前浏览器的记录。
+
+新的 AI 解读仍需联网。离线状态会明确提示并阻止发送；已有、能够按原模型／模式／记录内容匹配的本地 AI 解读仍按原校验规则读取，离线重新生成不会删除它。`navigator.onLine` 只是即时状态提示，在线也可能遇到连接或 CORS 问题。AI 缓存继续使用 localStorage 的 `yi-ai-interpretations-v1`；Service Worker 不缓存 BYOK 请求、响应、Key、Authorization、所问或记录导出文件。
+
+Chrome / Edge 可使用地址栏或浏览器菜单的安装入口；Android 可选择安装／添加到主屏幕；iOS Safari 使用「分享 → 添加到主屏幕」，添加后先联网打开一次再尝试飞行模式。站点沿用纸墨界面，没有自制安装弹窗。必须通过 HTTPS 或 localhost 使用 Service Worker。
+
+`npm run build` 自动生成 manifest、`sw.js` 和内容哈希预缓存清单。所有 URL、安装启动地址与 scope 都由 `NEXT_PUBLIC_BASE_PATH` 生成，支持根路径、`/yi` 和多段子路径；无需手工复制文件或修改仓库名。SW 部署在当前 basePath 内，不依赖特殊响应头。192／512 PNG、独立 maskable PNG 与 iOS 180 PNG 均随站点提供。
+
+缓存名为 `yi-static-<部署路径指纹>-<构建内容指纹>`。安装阶段核对每个文件的 SHA-256，全部成功才安装；运行时仅对同源、scope 内、清单中的静态 GET 使用 cache-first，不添加任意 runtime cache。POST、跨域、`no-store` 与显式认证请求不走静态缓存。未知路由保留 404，资源查询参数不被一律忽略。
+
+预缓存扫描全部导出应用文件，只排除 SW 本身、诊断清单 `precache.json` 与部署控制文件 `.nojekyll`；后者保留在部署产物中，但公开 Pages 不提供其下载 URL，不能作为安装必需资源。
+
+页面打开时注册并检查更新，`updateViaCache: "none"`。新版本先完整预缓存，然后等待所有由旧 worker 控制的标签页／主屏幕窗口关闭，再在下次打开时接管；不会自动刷新正在填写的表单。单独刷新一个仍打开的旧标签页可能继续使用旧版本。激活只删除当前部署路径下的旧 Yi 静态缓存，不改 localStorage，也不删除其他站点或兄弟路径的 cache。开发模式不注册 SW，建议使用不同于生产预览的端口。
+
+浏览器可能因存储压力或系统策略回收 Cache Storage，离线缓存不保证永久保留；回收后需要重新联网完整加载。**清除网站数据会同时删除本地卦例、设置和 PWA 缓存**，操作前请导出卦例。主屏幕应用与普通浏览器的存储共享行为取决于浏览器和系统，iOS 真机安装仍需人工验收。
 
 ## 三钱约定与结构规则
 
@@ -120,9 +138,11 @@ npm run check:static
 npm start
 ```
 
-`npm run build` 先校验经典数据、生成简体阅读层，再运行 `next build`，直接输出 `out/`（无需 `next export`）。`npm start` 只是本地静态预览器，生产托管不需要 Node 服务。默认 3000 端口，可用 `$env:PORT='3010'` 更改。
+`npm run build` 先校验经典数据、生成简体阅读层，再运行 `next build` 静态导出，最后扫描 `out/` 生成完整 PWA（无需 `next export` 或第二个手工步骤）。`npm start` 只是本地静态预览器，生产托管不需要 Node 服务。默认 3000 端口，可用 `$env:PORT='3010'` 更改。
 
-浏览器验收：站点运行后执行 `npm run test:browser`（既有流程）和 `npm run test:browser:ai`（拦截模拟 API，不访问真实 provider）。默认用 Windows 已安装 Chrome；其他平台用 `BROWSER_PATH` 指向 Chrome/Chromium。`BROWSER_BASE_URL` 可覆盖待测地址。既有流程报告在 `artifacts/v3-browser-report.json`，V4 AI 报告在 `artifacts/v4-ai-browser-report.json`。
+浏览器验收：站点运行后执行 `npm run test:browser`（既有流程）和 `npm run test:browser:ai`（拦截模拟 API，不访问真实 provider）。自动探测已安装的 Windows Chrome／Edge、Linux Chrome／Chromium，也可用 `BROWSER_PATH` 覆盖。`BROWSER_BASE_URL` 可覆盖待测地址。既有流程报告在 `artifacts/v3-browser-report.json`，当前 AI 报告在 `artifacts/v4-1-ai-browser-report.json`。
+
+`npm run test:browser:pwa` 针对 production `out/` 验证真实 offline、全部静态路由、起卦／草稿／本地数据、导入导出、AI 离线与缓存排除、双版本 worker 更新及 Chromium 原生安装资格。未设置 `BROWSER_BASE_URL` 时，脚本自动以同一 basePath 启动静态服务器（3030 端口），结束时停止；显式设置时使用已有服务器。构建与测试的 `NEXT_PUBLIC_BASE_PATH` 必须一致。自动发现本机 Chrome／Edge 与 Linux Chrome／Chromium，不下载浏览器。报告为 `artifacts/v4-2-pwa-browser-report.json`；AI 当前报告为 `artifacts/v4-1-ai-browser-report.json`。更新测试用内存中的两个 worker 版本，不修改待部署产物。
 
 ## GitHub Pages
 
@@ -149,10 +169,10 @@ npm run test:browser
 
 1. 将项目放入 GitHub 仓库，在 **Settings → Pages → Source** 选择 **GitHub Actions**。
 2. push 到 `main` 或手动触发 `workflow_dispatch`。
-3. `npm ci → lint → typecheck → test → build/export → check:static → upload → deploy`。
+3. `npm ci → lint → typecheck → test → build/export/PWA → check:static → production PWA offline regression → upload → deploy`。
 4. `configure-pages` 的 `base_path` 输出传给构建，自动适配仓库子路径、根站点或自定义域名配置。
 
-使用 GitHub 官方 `configure-pages@v5`、`upload-pages-artifact@v4`、`deploy-pages@v4`；部署 job 仅申请 `pages:write`、`id-token:write`，并使用 `github-pages` environment。参考 [GitHub 官方 Pages workflow 文档](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。本轮未关联远端仓库、未 push、未真实部署；需在目标仓库首次运行后确认 Pages 设置、Actions 权限和发布 URL。
+使用 GitHub 官方 `configure-pages@v5`、`upload-pages-artifact@v4`、`deploy-pages@v4`；部署 job 仅申请 `pages:write`、`id-token:write`，并使用 `github-pages` environment。PWA 回归使用 runner 已有 Chrome（依据[官方 runner 软件清单](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md)），测试实际 Pages base_path 的导出产物，只有本地请求和拦截的假 AI，无新 secret 或外部服务。本轮未运行远端 Actions、未 push 或部署；首次发布后仍需检查实际 workflow、Pages 和真机安装行为。
 
 ## 验收与文件变更
 

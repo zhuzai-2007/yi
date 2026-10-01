@@ -1,6 +1,7 @@
 export type AiErrorCode =
   | "endpoint"
   | "config"
+  | "offline"
   | "network"
   | "cors"
   | "unauthorized"
@@ -11,6 +12,7 @@ export type AiErrorCode =
   | "abort"
   | "unsupported";
 const messages: Record<AiErrorCode, string> = {
+  offline: "当前处于离线状态，无法生成新的 AI 解读。已保存的本地内容仍可使用。",
   endpoint:
     "请输入不含账号、密码、查询参数或片段的 HTTPS API Endpoint。开发环境可使用本机 HTTP。",
   config: "请填写有效的 Model 和 API Key。",

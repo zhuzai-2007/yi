@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "npm run validate:data && npm run data:simplify && next build",
+    "build": "npm run validate:data && npm run data:simplify && next build && node scripts/generate-pwa.mjs",
     "start": "node scripts/serve.mjs",
     "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
@@ -15,7 +15,8 @@
     "data:simplify": "node scripts/generate-simplified.mjs",
     "check:static": "node scripts/check-static.mjs",
     "test:browser": "node scripts/browser-check.mjs",
-    "test:browser:ai": "node scripts/browser-ai-check.mjs"
+    "test:browser:ai": "node scripts/browser-ai-check.mjs",
+    "test:browser:pwa": "node scripts/browser-pwa-check.mjs"
   },
   "dependencies": {
     "next": "^16.1.0",

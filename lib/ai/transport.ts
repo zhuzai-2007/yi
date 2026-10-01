@@ -1,4 +1,5 @@
 import { AiError } from "./errors";
+import { isOffline } from "./connectivity";
 import { interpretationJsonSchema } from "./schema";
 import type { AiConfig, AiRequest, AiTransport } from "./types";
 export function validateEndpoint(
@@ -39,6 +40,8 @@ export class OpenAICompatibleTransport implements AiTransport {
       fetch(input, init),
   ) {}
   async generate({ messages, signal, hasChanges }: AiRequest): Promise<string> {
+    if (signal.aborted) throw new AiError("abort");
+    if (isOffline()) throw new AiError("offline");
     const endpoint = resolveEndpoint(this.config);
     if (
       !this.config.model.trim() ||
@@ -81,11 +84,7 @@ export class OpenAICompatibleTransport implements AiTransport {
       });
     } catch {
       if (signal.aborted) throw new AiError("abort");
-      throw new AiError(
-        typeof navigator !== "undefined" && navigator.onLine === false
-          ? "network"
-          : "cors",
-      );
+      throw new AiError(isOffline() ? "offline" : "cors");
     }
     if (!response.ok)
       throw new AiError(
@@ -135,7 +134,9 @@ export class OpenAICompatibleTransport implements AiTransport {
         throw new AiError("invalid_body");
       return content;
     } catch {
-      throw new AiError(signal.aborted ? "abort" : "invalid_body");
+      throw new AiError(
+        signal.aborted ? "abort" : isOffline() ? "offline" : "invalid_body",
+      );
     }
   }
 }

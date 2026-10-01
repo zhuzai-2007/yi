@@ -1,4 +1,39 @@
-# V4.1 当前验收
+# V4.2 / PWA 当前验收
+
+2026-10-01（Asia/Shanghai），Windows / Node.js 22.23.2 / Next.js 16.3.5 / Playwright 1.63.0 / 系统 Chrome 154.0.8037.92。开始时工作树干净；本轮仅本地修改，未 commit、push 或 deploy。最终 `out/` 为 `/yi`，预览：`http://127.0.0.1:3020/yi/`。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `npm run lint` | 通过，0 错误／警告 |
+| `npm run typecheck` | strict 通过 |
+| `npm test` | 79/79；原 72 项完整保留，新增 5 项 PWA 路径／manifest／指纹检查与 2 项 AI 离线 transport 检查 |
+| `NEXT_PUBLIC_BASE_PATH=/yi npm run build` | 通过；四条既有静态页面、manifest、图标、SW 与预缓存清单一次生成 |
+| `NEXT_PUBLIC_BASE_PATH=/yi npm run check:static` | 通过；53 项应用文件逐项核对 URL／SHA-256，约 2.57 MiB；manifest、图标尺寸、注册 props、scope 与 favicon 正确 |
+| `npm run test:browser` | 最终 `/yi` 原起卦／恢复／记录／导入导出／简繁／路由／响应式回归通过；浏览器错误、HTTP 错误、第三方请求均 0 |
+| `npm run test:browser:ai` | 最终 `/yi` 25 次拦截模拟请求，真实 API 0 次；原 schema／source／meta-language／取消／缓存／设置回归通过 |
+| `npm run test:browser:pwa` | 最终 `/yi` production 静态产物通过；另对空 basePath 和 `/reading/classics` 完成实际 build／static／完整 offline 回归 |
+| 原生安装资格 | 临时普通 Chrome profile 的 `Page.getInstallabilityErrors` 为 `[]`；manifest 可解析，192／512／maskable 图标均 HTTP 200，iOS 180 touch icon 静态路径存在 |
+| 受保护文件／数据 | casting、records schema/storage、language、经典数据、AI storage/schema/validator/context、Next 配置和 lockfile 均无 diff |
+
+首次只在线访问首页后，等待 native `navigator.serviceWorker.ready`、active=`activated` 与 controller；scope 实测 `/yi/`，脚本为 `/yi/sw.js`，`updateViaCache` 为 `none`。Cache Storage 含全部清单资源，不需要逐页在线访问。切换 BrowserContext offline 后，四路由首次打开、刷新和 `/record/?id=<existing>` 直接刷新均成功，且检查客户端已完成本地读取，未用静态 loading 文案冒充成功。未知在线路由仍返回 404。
+
+离线固定输入 `7 9 7 7 6 7` 为大有 14、九二／六五动、同人 13。实际读取总览、动爻、两卦经／传／六爻、完整结构表、原典关联；大车以载／大車以載切换和刷新偏好保留。真实 secure random 完成六投；第三投后刷新、恢复，前三次币面及合计完全不变；完成保存并清草稿。在线创建的原记录在 offline reload 后逐字段相同。离线列表、JSON blob 下载、删除、文件导入恢复均通过。
+
+AI offline：在线经拦截 API 生成并保存一个有效解读，离线刷新后由现有严格校验重新读取。重新生成显示明确离线提示，结果和 localStorage 缓存均保持；无缓存模式也明确提示，offline 新请求为 0。恢复 online 后再次生成成功。PWA 套件共 2 次 mock AI 调用，真实 API 0 次。另发送同源认证 POST／GET 与未知 GET，逐项检查 Cache Storage：只包含清单里的同源 GET，没有 AI endpoint、认证 header、假 Key、runtime response 或带用户 query 的 cache key。资源 query 未被全局忽略。
+
+更新回归使用内存中的两个 SW revision，不改部署产物。新 worker 完整安装后在有旧 tab 时等待，输入框没有被刷新；旧 cache 仍可用。关闭旧 tab 后，新版本激活并清理旧版本和伪旧 cache，保留当前 cache、无关项目 cache 与 localStorage 卦例；重新打开并 offline refresh 原记录正常。缓存 namespace 包含部署路径指纹，兄弟 basePath 的 cache 不被误删。
+
+Pages 兼容补查：对现有公开站点只读 GET，首页、`_not-found/`、`404.html`、`404/`、`record/index.txt`、`__next._tree.txt` 为 200；`.nojekyll` 为 404。因此部署产物保留 `.nojekyll`，预缓存仅排除它、SW 本身和诊断清单。实际发布本轮 PWA、远端 Actions 与真实安装尚未验证。Pages workflow 已在 upload 前加入 production offline regression；按官方 runner 软件清单采用已有 Chrome，未增加 secret、浏览器下载或真实 provider 调用。
+
+人工查看：首页、桌面已缓存 AI 的离线提示、320px 离线 AI 页面与应用图标；无阻断性视觉问题。自动复核 390／375／320px 无水平溢出或结果页双重滚动；原两套浏览器回归的 sticky、设置与移动箭头检查保留。
+
+证据：`artifacts/v4-2-pwa-browser-report.json`、`v4-2-pwa-root-report.json`、`v4-2-pwa-nested-report.json`、`v4-2-pwa-yi-report.json`、`v3-browser-report.json`、`v4-1-ai-browser-report.json`；截图 `v4-2-home.png`、`v4-2-ai-offline.png`、`v4-2-offline-390.png`、`v4-2-offline-375.png`、`v4-2-offline-320.png`。详细本地报告为 `V4.2-DELIVERY.md`；已确认 out、artifacts、报告均被忽略。
+
+限制：首次完整安装必须联网；浏览器可回收缓存。未验证 iPhone／Android 真机、Safari 主屏幕安装／飞行模式、不同浏览器之间的存储共享或真实 AI provider。Chromium 安装资格检查不等于实际完成系统安装。远端 GitHub Actions 只修改配置，未运行。Windows 沙箱首次单元测试 `spawn EPERM` 经获准本地子进程重跑通过；Chrome 普通 profile 在离线 reload 的模拟状态出现差异，因此离线回归使用既有隔离 context，原生安装资格另用临时普通 profile 检查；没有修改应用来伪造联网状态。
+
+---
+
+# V4.1 历史验收
 
 2026-09-20，Windows / Node.js 22.23.2 / Next.js 16.3.5 / Chrome。未 commit、push 或 deploy。预览：`http://127.0.0.1:3015/yi/`。
 

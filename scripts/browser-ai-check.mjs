@@ -1,4 +1,5 @@
 import { chromium, expect } from "@playwright/test";
+import { browserExecutable } from "./browser-executable.mjs";
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 const base = (
@@ -6,9 +7,7 @@ const base = (
 ).replace(/\/$/, "");
 const browser = await chromium.launch({
   headless: true,
-  executablePath:
-    process.env.BROWSER_PATH ||
-    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  executablePath: browserExecutable(),
 });
 const context = await browser.newContext({
   viewport: { width: 1440, height: 1000 },

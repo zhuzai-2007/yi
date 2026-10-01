@@ -6,6 +6,7 @@ import { buildInterpretationContext } from "../../lib/ai/context";
 import { generateInterpretation } from "../../lib/ai/generate";
 import { OpenAICompatibleTransport } from "../../lib/ai/transport";
 import { AiError } from "../../lib/ai/errors";
+import { isOffline, useOffline } from "../../lib/ai/connectivity";
 import { ValidationError } from "../../lib/ai/validator";
 import { AI_PROMPT_VERSION } from "../../lib/ai/prompt";
 import {
@@ -28,6 +29,7 @@ const modes = [
   { id: "question", label: "结合所问" },
 ];
 export default function AiInterpretation({ record }: { record: CastRecord }) {
+  const offline = useOffline();
   const [mode, setMode] = useState<InterpretationMode>("plain");
   const { config, openSettings, cacheRevision } = useAiSettings();
   const [entry, setEntry] = useState<CachedInterpretation | null>(null),
@@ -73,7 +75,13 @@ export default function AiInterpretation({ record }: { record: CastRecord }) {
   async function generate() {
     if (request.current || (mode === "question" && !record.question.trim()))
       return;
+    if (isOffline()) {
+      setError(new AiError("offline").message);
+      setDetails([]);
+      return;
+    }
     const controller = new AbortController();
+    const previousEntry = entry;
     request.current = controller;
     setEntry(null);
     setError("");
@@ -107,6 +115,7 @@ export default function AiInterpretation({ record }: { record: CastRecord }) {
       }
     } catch (e) {
       if (request.current !== controller) return;
+      if (e instanceof AiError && e.code === "offline") setEntry(previousEntry);
       setError(
         e instanceof AiError || e instanceof ValidationError
           ? e.message
@@ -187,6 +196,11 @@ export default function AiInterpretation({ record }: { record: CastRecord }) {
           )}
           {stage && (
             <p className="small muted">切换模式或离开此页签会取消当前生成。</p>
+          )}
+          {offline && !error && (
+            <p role="status" className="small muted">
+              {new AiError("offline").message}
+            </p>
           )}
           <div className="action-row">
             <button
